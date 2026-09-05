@@ -23,16 +23,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const api = "/api/v1";
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors({ origin: process.env.CLIENT_URL?.split(",")?.[0] || true }));
+const clientUrls = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((u) => u.trim()).filter(Boolean)
+  : [];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || clientUrls.length === 0 || clientUrls.includes(origin) || clientUrls.includes("*")) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use(
-  `${api}/auth`,
-  rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true }),
-  authRoutes,
-);
 
 app.get("/", (req, res) =>
   sendSuccess(res, 200, "Trip Marketplace API is running", {
@@ -46,17 +55,24 @@ app.get("/health", (req, res) =>
   }),
 );
 
-// Connect lazily per request so the app can be imported by tests without a live database.
+// Connect lazily per request so serverless invocations (Vercel) and cold starts always connect before executing queries.
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
-  } catch {
+  } catch (err) {
+    console.error("Database connection error:", err.message);
     res
       .status(503)
-      .json({ success: false, message: "Database temporarily unavailable" });
+      .json({ success: false, message: "Database temporarily unavailable", error: err.message });
   }
 });
+
+app.use(
+  `${api}/auth`,
+  rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true }),
+  authRoutes,
+);
 
 app.use(`${api}/users`, userRoutes);
 app.use(`${api}/destinations`, destinationRoutes);
