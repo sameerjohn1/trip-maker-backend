@@ -8,6 +8,7 @@ export const getDestinations = catchAsync(async (req, res) => {
   if (req.query.search) filter.$or = [
     { name: new RegExp(req.query.search, "i") },
     { country: new RegExp(req.query.search, "i") },
+    { city: new RegExp(req.query.search, "i") },
   ];
   const destinations = await Destination.find(filter).sort({ name: 1 });
   sendSuccess(res, 200, "Destinations fetched successfully", { destinations });

@@ -12,7 +12,8 @@ const restoreSeats = (booking) =>
   );
 
 export const createBooking = catchAsync(async (req, res) => {
-  const travelers = Number(req.body?.travelers);
+  const rawTravelers = req.body?.travelers;
+  const travelers = Array.isArray(rawTravelers) ? rawTravelers.length : Number(rawTravelers);
   const { tripDateId } = req.body || {};
   if (!tripDateId || !Number.isInteger(travelers) || travelers < 1) {
     throw new AppError("tripDateId and a positive integer travelers value are required", 400);

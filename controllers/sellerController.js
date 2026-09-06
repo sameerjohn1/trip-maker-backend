@@ -38,6 +38,14 @@ export const uploadDocuments = catchAsync(async (req, res) => {
   sendSuccess(res, 201, "Seller documents uploaded successfully", { documents, profile: user.sellerProfile });
 });
 
+export const uploadImage = catchAsync(async (req, res) => {
+  if (!req.file) throw new AppError("Please provide an image file to upload", 400);
+  sendSuccess(res, 201, "Image uploaded successfully", {
+    url: `/uploads/${req.file.filename}`,
+    originalName: req.file.originalname,
+  });
+});
+
 export const dashboard = catchAsync(async (req, res) => {
   const [trips, inquiries, bookings, pendingBookings] = await Promise.all([
     Trip.countDocuments({ seller: req.user._id, isDeleted: false }),

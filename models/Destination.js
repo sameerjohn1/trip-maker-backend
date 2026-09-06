@@ -4,6 +4,7 @@ const destinationSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 100 },
     country: { type: String, required: true, trim: true, maxlength: 100 },
+    city: { type: String, trim: true, maxlength: 100 },
     region: {
       type: String,
       enum: ["Asia", "Europe", "North America", "South America", "Africa", "Oceania", "Middle East"],
@@ -19,7 +20,7 @@ const destinationSchema = new mongoose.Schema(
     },
     tags: [{ type: String, trim: true }],
   },
-  { timestamps: true },
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
 destinationSchema.index({ name: 1, country: 1 }, { unique: true });

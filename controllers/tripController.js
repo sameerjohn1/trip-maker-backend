@@ -1,4 +1,5 @@
 import Trip from "../models/Trip.js";
+import Destination from "../models/Destination.js";
 import Favorite from "../models/Favorite.js";
 import Booking from "../models/Booking.js";
 import AppError from "../utils/AppError.js";
@@ -106,6 +107,19 @@ export const getSellerTrip = catchAsync(async (req, res) => {
 export const createTrip = catchAsync(async (req, res) => {
   const body = payloadFromRequest(req);
   validatePrice(body);
+
+  if (body.destination && (!body.country || !body.city)) {
+    const destDoc = await Destination.findById(body.destination);
+    if (destDoc) {
+      if (!body.country) body.country = destDoc.country;
+      if (!body.city) body.city = destDoc.city || destDoc.name;
+    }
+  }
+
+  if (body.numberOfNights === undefined && body.duration !== undefined) {
+    body.numberOfNights = Math.max(0, Number(body.duration) - 1);
+  }
+
   const trip = await Trip.create({ ...body, seller: req.user._id, status: "DRAFT" });
   sendSuccess(res, 201, "Trip draft created successfully", { trip });
 });
@@ -115,6 +129,15 @@ export const updateTrip = catchAsync(async (req, res) => {
   if (!trip) throw new AppError("Trip not found", 404);
   const body = payloadFromRequest(req);
   validatePrice(body);
+
+  if (body.destination && (!body.country || !body.city)) {
+    const destDoc = await Destination.findById(body.destination);
+    if (destDoc) {
+      if (!body.country && !trip.country) body.country = destDoc.country;
+      if (!body.city && !trip.city) body.city = destDoc.city || destDoc.name;
+    }
+  }
+
   delete body.status;
   delete body.seller;
   const importantFields = ["price", "discountPrice", "destination", "availability", "itinerary", "country", "city"];

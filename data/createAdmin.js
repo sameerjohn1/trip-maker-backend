@@ -6,16 +6,9 @@ import User from "../models/User.js";
 // "email": "admin@example.com",
 // "password": "Admin123!"
 
-const email = process.env.ADMIN_EMAIL;
-const password = process.env.ADMIN_PASSWORD;
-const name = process.env.ADMIN_NAME || "Platform Admin";
-
-if (!email || !password) {
-  console.error(
-    "Set ADMIN_EMAIL and ADMIN_PASSWORD before running: npm run admin",
-  );
-  process.exit(1);
-}
+const email = process.env.ADMIN_EMAIL || "muhammedaliashfaq@gmail.com";
+const password = process.env.ADMIN_PASSWORD || "123456";
+const name = process.env.ADMIN_NAME || "Muhammad Ali Ashfaq";
 
 try {
   await connectDB();
@@ -28,10 +21,11 @@ try {
       role: "ADMIN",
       status: "ACTIVE",
       emailVerified: true,
+      tokenVersion: 0,
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
-  console.log(`Admin ready: ${user.email}`);
+  console.log(`Admin ready: ${user.email} (Role: ${user.role}, Status: ${user.status})`);
 } catch (error) {
   console.error("Admin creation failed:", error.message);
   process.exitCode = 1;

@@ -34,4 +34,6 @@ export const tripUpload = multer({ storage, fileFilter, limits }).fields([
   { name: "galleryImages", maxCount: 10 },
 ]);
 
+export const singleImageUpload = multer({ storage, fileFilter, limits }).single("image");
+
 export const sellerDocumentUpload = multer({ storage, fileFilter, limits }).array("documents", 5);
