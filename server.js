@@ -15,6 +15,7 @@ import interactionRoutes from "./routes/interactionRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 import { sendSuccess } from "./utils/response.js";
 
@@ -80,6 +81,7 @@ app.use(`${api}/trips`, tripRoutes);
 app.use(`${api}/bookings`, bookingRoutes);
 app.use(`${api}/seller`, sellerRoutes);
 app.use(`${api}/admin`, adminRoutes);
+app.use(`${api}/upload`, uploadRoutes);
 app.use(`${api}`, interactionRoutes);
 app.use(notFound);
 app.use(errorHandler);

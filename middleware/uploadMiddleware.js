@@ -6,13 +6,7 @@ import AppError from "../utils/AppError.js";
 const uploadDirectory = path.join(process.cwd(), "uploads");
 fs.mkdirSync(uploadDirectory, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDirectory),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "-");
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeName}`);
-  },
-});
+const storage = multer.memoryStorage();
 
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const documentTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);

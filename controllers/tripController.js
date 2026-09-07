@@ -22,26 +22,51 @@ const payloadFromRequest = (req) => {
 
 const validatePrice = (body) => {
   if (body.discountPrice !== undefined && body.discountPrice > body.price) {
-    throw new AppError("Discount price cannot be greater than the original price", 400);
+    throw new AppError('Discount price cannot be greater than the original price', 400);
   }
+};
+
+const validateTripPayload = (body) => {
   if (body.availability !== undefined) {
-    if (!Array.isArray(body.availability)) throw new AppError("availability must be an array", 400);
+    if (!Array.isArray(body.availability)) throw new AppError('availability must be an array', 400);
     body.availability = body.availability.map((date) => ({
       ...date,
       departureDate: new Date(date.departureDate),
       returnDate: new Date(date.returnDate),
       totalSeats: Number(date.totalSeats),
       availableSeats: date.availableSeats === undefined ? Number(date.totalSeats) : Number(date.availableSeats),
+      minimumGroupSize: Number(date.minimumGroupSize),
     }));
     body.availability.forEach((date) => {
-      if (Number.isNaN(date.departureDate.getTime()) || Number.isNaN(date.returnDate.getTime()) ||
-          date.returnDate < date.departureDate || !Number.isInteger(date.totalSeats) || date.totalSeats < 1 ||
-          !Number.isInteger(date.availableSeats) || date.availableSeats < 0 || date.availableSeats > date.totalSeats) {
-        throw new AppError("Each availability date must contain valid dates and seat counts", 400);
+      const now = new Date();
+      if (Number.isNaN(date.departureDate.getTime()) || Number.isNaN(date.returnDate.getTime())) {
+        throw new AppError('Invalid departure or return date', 400);
+      }
+      if (date.departureDate <= now) {
+        throw new AppError('departureDate must be in the future', 400);
+      }
+      if (date.returnDate <= date.departureDate) {
+        throw new AppError('returnDate must be later than departureDate', 400);
+      }
+      if (!Number.isInteger(date.totalSeats) || date.totalSeats < 1) {
+        throw new AppError('totalSeats must be an integer >= 1', 400);
+      }
+      if (!Number.isInteger(date.availableSeats) || date.availableSeats < 1) {
+        throw new AppError('availableSeats must be an integer >= 1', 400);
+      }
+      if (date.availableSeats > date.totalSeats) {
+        throw new AppError('availableSeats cannot be greater than totalSeats', 400);
+      }
+      if (!Number.isInteger(date.minimumGroupSize) || date.minimumGroupSize < 1) {
+        throw new AppError('minimumGroupSize must be an integer >= 1', 400);
+      }
+      if (date.minimumGroupSize > date.availableSeats) {
+        throw new AppError('minimumGroupSize cannot be greater than availableSeats', 400);
       }
     });
   }
 };
+// Duplicate validation block removed
 
 const publicFilter = (req) => {
   const filter = { isDeleted: false, status: { $in: ["PUBLISHED", "APPROVED"] } };
@@ -107,6 +132,7 @@ export const getSellerTrip = catchAsync(async (req, res) => {
 export const createTrip = catchAsync(async (req, res) => {
   const body = payloadFromRequest(req);
   validatePrice(body);
+  validateTripPayload(body);
 
   if (body.destination && (!body.country || !body.city)) {
     const destDoc = await Destination.findById(body.destination);
@@ -129,6 +155,7 @@ export const updateTrip = catchAsync(async (req, res) => {
   if (!trip) throw new AppError("Trip not found", 404);
   const body = payloadFromRequest(req);
   validatePrice(body);
+  validateTripPayload(body);
 
   if (body.destination && (!body.country || !body.city)) {
     const destDoc = await Destination.findById(body.destination);

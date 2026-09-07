@@ -13,3 +13,22 @@ export const getDestinations = catchAsync(async (req, res) => {
   const destinations = await Destination.find(filter).sort({ name: 1 });
   sendSuccess(res, 200, "Destinations fetched successfully", { destinations });
 });
+
+export const createDestination = catchAsync(async (req, res) => {
+  const { name, country, city, region, description, imageUrl, averageDailyCost, bestSeason, tags } = req.body;
+  if (!name || !country || !region || !description) {
+    throw new AppError("name, country, region, and description are required", 400);
+  }
+  const destination = await Destination.create({
+    name,
+    country,
+    city: city || name,
+    region,
+    description,
+    imageUrl: imageUrl || "",
+    averageDailyCost: averageDailyCost || 0,
+    bestSeason: bestSeason || "Year-round",
+    tags: tags || [],
+  });
+  sendSuccess(res, 201, "Destination created successfully", { destination });
+});
