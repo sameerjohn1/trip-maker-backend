@@ -7,6 +7,8 @@ import Trip from "../models/Trip.js";
 import Booking from "../models/Booking.js";
 import Inquiry from "../models/Inquiry.js";
 import Favorite from "../models/Favorite.js";
+import Chat from "../models/Chat.js";
+import Message from "../models/Message.js";
 
 const seed = async () => {
   console.log("Connecting to database for seeding...");
@@ -184,14 +186,30 @@ const seed = async () => {
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
-  console.log("Users seeded successfully: Admin, 2 Sellers, 2 Travelers.");
+  const travelerTesting = await User.findOneAndUpdate(
+    { email: "testing@gmail.com" },
+    {
+      name: "Testing Traveler",
+      email: "testing@gmail.com",
+      password: hashedPassword123456,
+      role: "TRAVELER",
+      status: "ACTIVE",
+      emailVerified: true,
+      tokenVersion: 0,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
 
-  // 3. Clear existing test trips, bookings, inquiries, favorites to have a clean slate
-  console.log("Resetting trips, bookings, inquiries, favorites...");
+  console.log("Users seeded successfully: Admin, 2 Sellers, 3 Travelers (including testing@gmail.com).");
+
+  // 3. Clear existing test trips, bookings, inquiries, favorites, chats, messages
+  console.log("Resetting trips, bookings, inquiries, favorites, chats, messages...");
   await Trip.deleteMany({ seller: sellerApproved._id });
   await Booking.deleteMany({});
   await Inquiry.deleteMany({});
   await Favorite.deleteMany({});
+  await Chat.deleteMany({});
+  await Message.deleteMany({});
 
   // 4. Seed Trips
   console.log("Seeding Trips...");
@@ -514,6 +532,35 @@ const seed = async () => {
   await Favorite.create({ traveler: traveler2._id, trip: trip3._id });
 
   console.log("Favorites seeded: 3 favorites.");
+
+  // 8. Seed Chats & Messages (specifically between testing@gmail.com and pending@travels.com)
+  console.log("Seeding Sample Chats & Messages...");
+  const seedChat = await Chat.create({
+    participants: [travelerTesting._id, sellerPending._id],
+    trip: trip1._id,
+    lastMessageAt: new Date(),
+  });
+
+  const msg1 = await Message.create({
+    chat: seedChat._id,
+    sender: travelerTesting._id,
+    text: "Hello! I am interested in booking a tour with Horizon Escapes.",
+    isRead: true,
+  });
+
+  const msg2 = await Message.create({
+    chat: seedChat._id,
+    sender: sellerPending._id,
+    text: "Hi Testing Traveler! Thank you for reaching out. We offer great custom tour packages.",
+    isRead: false,
+  });
+
+  seedChat.lastMessage = msg2._id;
+  seedChat.lastMessageText = msg2.text;
+  seedChat.lastMessageAt = msg2.createdAt;
+  await seedChat.save();
+
+  console.log("Chats & Messages seeded: 1 chat, 2 messages.");
   console.log("--- SEEDING COMPLETE SUCCESSFULLY! ---");
 };
 

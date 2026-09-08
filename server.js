@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import http from "http";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -7,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 import connectDB from "./configs/db.js";
+import { initSocket } from "./configs/socket.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import destinationRoutes from "./routes/destinationRoutes.js";
@@ -16,10 +18,14 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 import { sendSuccess } from "./utils/response.js";
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const api = "/api/v1";
 
@@ -81,6 +87,7 @@ app.use(`${api}/trips`, tripRoutes);
 app.use(`${api}/bookings`, bookingRoutes);
 app.use(`${api}/seller`, sellerRoutes);
 app.use(`${api}/admin`, adminRoutes);
+app.use(`${api}/chats`, chatRoutes);
 app.use(`${api}/upload`, uploadRoutes);
 app.use(`${api}`, interactionRoutes);
 app.use(notFound);
@@ -91,7 +98,7 @@ if (process.env.NODE_ENV !== "test") {
 
   connectDB()
     .then(() => {
-      app.listen(port, () =>
+      server.listen(port, () =>
         console.log(`Trip Marketplace API listening on port ${port}`),
       );
     })

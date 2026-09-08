@@ -4,6 +4,7 @@ import {
   listAdminBookings, listAdminTrips, listSellers, listUsers, rejectSeller, rejectTrip,
   unpublishTrip, updateUserStatus,
 } from "../controllers/adminController.js";
+import { getAdminChats, getAdminChatMessages } from "../controllers/chatController.js";
 import { authorize, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -25,4 +26,6 @@ router.patch("/trips/:id/unpublish", unpublishTrip);
 router.delete("/trips/:id", deleteAdminTrip);
 router.get("/bookings", listAdminBookings);
 router.get("/bookings/:id", getAdminBooking);
+router.get("/chats", getAdminChats);
+router.get("/chats/:chatId/messages", getAdminChatMessages);
 export default router;
