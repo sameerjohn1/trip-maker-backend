@@ -29,9 +29,6 @@ export const publicUser = (user) => ({
   email: user.email,
   role: user.role,
   status: user.status,
-  emailVerified: user.emailVerified,
-  sellerProfile: user.sellerProfile,
-  createdAt: user.createdAt,
 });
 
 export const removeFile = (fileUrl) => {

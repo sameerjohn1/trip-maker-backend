@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 
 let io = null;
 
@@ -15,8 +16,20 @@ export const initSocket = (server) => {
     },
   });
 
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (!token) {
+      return next(new Error("Authentication error: Token is required"));
+    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) return next(new Error("Authentication error: Invalid token"));
+      socket.userId = decoded.id;
+      next();
+    });
+  });
+
   io.on("connection", (socket) => {
-    console.log(`[Socket] User connected: ${socket.id}`);
+    console.log(`[Socket] User connected: ${socket.id}, User ID: ${socket.userId}`);
 
     // Join room for specific chat conversation
     socket.on("join_chat", (chatId) => {
@@ -27,7 +40,6 @@ export const initSocket = (server) => {
       }
     });
 
-    // Leave room for specific chat conversation
     socket.on("leave_chat", (chatId) => {
       if (chatId) {
         const room = `chat_${chatId}`;
@@ -36,7 +48,6 @@ export const initSocket = (server) => {
       }
     });
 
-    // Handle typing events
     socket.on("typing", ({ chatId, userId, userName }) => {
       if (chatId) {
         socket.to(`chat_${chatId}`).emit("user_typing", { chatId, userId, userName });

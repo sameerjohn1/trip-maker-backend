@@ -1,28 +1,5 @@
 import mongoose from "mongoose";
 
-const sellerProfileSchema = new mongoose.Schema(
-  {
-    agencyName: { type: String, trim: true, maxlength: 100 },
-    description: { type: String, trim: true, maxlength: 1000 },
-    phone: { type: String, trim: true, maxlength: 30 },
-    address: { type: String, trim: true, maxlength: 300 },
-    verificationStatus: {
-      type: String,
-      enum: ["NOT_SUBMITTED", "PENDING", "APPROVED", "REJECTED"],
-      default: "NOT_SUBMITTED",
-    },
-    rejectionReason: { type: String, trim: true, maxlength: 500 },
-    documents: [
-      {
-        url: String,
-        originalName: String,
-        uploadedAt: { type: Date, default: Date.now },
-      },
-    ],
-  },
-  { _id: false },
-);
-
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
@@ -35,10 +12,10 @@ const userSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
     password: { type: String, required: true, minlength: 6, select: false },
-    role: { type: String, enum: ["TRAVELER", "SELLER", "ADMIN"], default: "TRAVELER" },
+    role: { type: String, enum: ["USER", "ADMIN"], default: "USER" },
     status: {
       type: String,
-      enum: ["PENDING", "ACTIVE", "SUSPENDED", "REJECTED", "DEACTIVATED"],
+      enum: ["ACTIVE", "SUSPENDED", "BANNED"],
       default: "ACTIVE",
     },
     emailVerified: { type: Boolean, default: false },
@@ -47,7 +24,6 @@ const userSchema = new mongoose.Schema(
     verificationExpires: Date,
     resetPasswordTokenHash: String,
     resetPasswordExpires: Date,
-    sellerProfile: { type: sellerProfileSchema, default: undefined },
   },
   { timestamps: true },
 );
