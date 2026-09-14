@@ -26,7 +26,7 @@ export const protect = catchAsync(async (req, res, next) => {
   if (decoded.type !== "access") return next(new AppError("Invalid access token", 401));
   const user = await User.findById(decoded.id);
   if (!user) return next(new AppError("User account no longer exists", 401));
-  if (!["ACTIVE", "PENDING"].includes(user.status)) {
+  if (user.status !== "ACTIVE") {
     return next(new AppError(`Account is ${user.status.toLowerCase()}`, 403));
   }
   if (decoded.tokenVersion !== user.tokenVersion) {
@@ -40,13 +40,6 @@ export const protect = catchAsync(async (req, res, next) => {
 export const authorize = (...roles) => (req, res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
     return next(new AppError("You do not have permission to perform this action", 403));
-  }
-  next();
-};
-
-export const requireSellerActive = (req, res, next) => {
-  if (req.user?.role === "SELLER" && req.user.status !== "ACTIVE") {
-    return next(new AppError("Seller account is pending admin approval", 403));
   }
   next();
 };

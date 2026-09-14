@@ -25,11 +25,11 @@ const itinerarySchema = new mongoose.Schema(
 
 const tripSchema = new mongoose.Schema(
   {
-    seller: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     title: { type: String, required: true, trim: true, minlength: 3, maxlength: 120 },
     shortDescription: { type: String, required: true, trim: true, maxlength: 300 },
     fullDescription: { type: String, required: true, trim: true, maxlength: 5000 },
-    destination: { type: mongoose.Schema.Types.ObjectId, ref: "Destination", required: true },
+    destination: { type: mongoose.Schema.Types.ObjectId, ref: "Destination" },
     country: { type: String, required: true, trim: true, maxlength: 100 },
     city: { type: String, required: true, trim: true, maxlength: 100 },
     category: { type: String, required: true, trim: true, maxlength: 60 },
@@ -52,16 +52,27 @@ const tripSchema = new mongoose.Schema(
     galleryImages: [{ type: String, trim: true }],
     status: {
       type: String,
-      enum: ["DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "PUBLISHED", "UNPUBLISHED", "ARCHIVED"],
+      enum: ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "REJECTED", "EXPIRED"],
       default: "DRAFT",
       index: true,
     },
     rejectionReason: { type: String, trim: true, maxlength: 1000 },
-    requiredChanges: { type: String, trim: true, maxlength: 2000 },
+    expiresAt: { type: Date, index: true },
+    
+    // Analytics & Interactions
+    viewCount: { type: Number, default: 0 },
+    favoriteCount: { type: Number, default: 0 },
+    bookingCount: { type: Number, default: 0 },
+    sales: { type: Number, default: 0 },
+    revenue: { type: Number, default: 0 },
+    
     isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },
 );
 
 tripSchema.index({ title: "text", shortDescription: "text", fullDescription: "text", city: "text", country: "text", category: "text" });
+tripSchema.index({ status: 1, expiresAt: 1 });
+tripSchema.index({ ownerId: 1, status: 1 });
+
 export default mongoose.model("Trip", tripSchema);

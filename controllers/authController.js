@@ -21,7 +21,7 @@ const authPayload = (user) => ({
 });
 
 export const register = catchAsync(async (req, res) => {
-  const { name, email, password, role = "TRAVELER" } = req.body || {};
+  const { name, email, password } = req.body || {};
   if (!name || !email || !password)
     throw new AppError("Name, email and password are required", 400);
   if (!emailPattern.test(String(email).trim()))
@@ -30,13 +30,7 @@ export const register = catchAsync(async (req, res) => {
     throw new AppError("Password must be at least 6 characters long", 400);
   }
   const normalizedEmail = String(email).trim().toLowerCase();
-  const normalizedRole = String(role).toUpperCase();
-  if (!["TRAVELER", "SELLER"].includes(normalizedRole)) {
-    throw new AppError(
-      "Public registration is only available for TRAVELER or SELLER",
-      400,
-    );
-  }
+  
   if (await User.exists({ email: normalizedEmail }))
     throw new AppError("A user with this email already exists", 409);
 
@@ -45,13 +39,10 @@ export const register = catchAsync(async (req, res) => {
     name: String(name).trim(),
     email: normalizedEmail,
     password: await bcrypt.hash(password, 12),
-    role: normalizedRole,
-    status: normalizedRole === "SELLER" ? "PENDING" : "ACTIVE",
+    role: "USER",
+    status: "ACTIVE",
     verificationTokenHash: hashToken(verificationToken),
     verificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    ...(normalizedRole === "SELLER"
-      ? { sellerProfile: { verificationStatus: "NOT_SUBMITTED" } }
-      : {}),
   });
 
   const data = { user: publicUser(user) };
@@ -70,10 +61,7 @@ export const login = catchAsync(async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.password))) {
     throw new AppError("Invalid email or password", 401);
   }
-  if (
-    user.status !== "ACTIVE" &&
-    !(user.role === "SELLER" && user.status === "PENDING")
-  ) {
+  if (user.status !== "ACTIVE") {
     throw new AppError(`Account is ${user.status.toLowerCase()}`, 403);
   }
   if (
@@ -102,7 +90,7 @@ export const refreshToken = catchAsync(async (req, res) => {
   const user = await User.findById(decoded.id);
   if (
     !user ||
-    !["ACTIVE", "PENDING"].includes(user.status) ||
+    user.status !== "ACTIVE" ||
     user.tokenVersion !== decoded.tokenVersion
   ) {
     throw new AppError("Refresh token is no longer valid", 401);

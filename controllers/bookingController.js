@@ -5,114 +5,89 @@ import catchAsync from "../utils/catchAsync.js";
 import { makePagination, paginationOptions } from "../utils/helpers.js";
 import { sendSuccess } from "../utils/response.js";
 
-const restoreSeats = (booking) =>
-  Trip.updateOne(
-    { _id: booking.trip, "availability._id": booking.tripDateId },
-    { $inc: { "availability.$.availableSeats": booking.travelers } },
-  );
-
 export const createBooking = catchAsync(async (req, res) => {
-  const rawTravelers = req.body?.travelers;
-  const travelers = Array.isArray(rawTravelers) ? rawTravelers.length : Number(rawTravelers);
-  const { tripDateId } = req.body || {};
-  if (!tripDateId || !Number.isInteger(travelers) || travelers < 1) {
-    throw new AppError("tripDateId and a positive integer travelers value are required", 400);
+  const { postId, tripDateId, travelers } = req.body || {};
+  if (!postId || !tripDateId || !travelers) {
+    throw new AppError("postId, tripDateId, and travelers are required", 400);
   }
 
-  const trip = await Trip.findOne({
-    _id: req.params.tripId,
-    isDeleted: false,
-    status: { $in: ["PUBLISHED", "APPROVED"] },
-    "availability._id": tripDateId,
+  const trip = await Trip.findOne({ _id: postId, isDeleted: false, status: "PUBLISHED" });
+  if (!trip) throw new AppError("Public post not found", 404);
+
+  const availability = trip.availability.find(a => a._id.toString() === tripDateId);
+  if (!availability) throw new AppError("Selected availability date not found", 404);
+
+  if (availability.availableSeats < travelers) {
+    throw new AppError("Not enough available seats", 409);
+  }
+
+  const existingBooking = await Booking.findOne({ userId: req.user._id, postId: trip._id, tripDateId });
+  if (existingBooking && existingBooking.status !== "CANCELLED") {
+    throw new AppError("You already have an active booking for this date", 409);
+  }
+
+  const amount = trip.price * travelers; // Simplified
+
+  const booking = await Booking.create({
+    userId: req.user._id,
+    postId: trip._id,
+    tripDateId,
+    selectedDepartureDate: availability.departureDate,
+    selectedReturnDate: availability.returnDate,
+    travelers,
+    amount,
+    currency: trip.currency,
   });
-  if (!trip) throw new AppError("Public trip or selected departure date not found", 404);
-  const selectedDate = trip.availability.id(tripDateId);
-  if (!selectedDate) throw new AppError("Selected departure date not found", 404);
 
-  const updatedTrip = await Trip.findOneAndUpdate(
-    { _id: trip._id, "availability._id": tripDateId, "availability.availableSeats": { $gte: travelers } },
-    { $inc: { "availability.$.availableSeats": -travelers } },
-    { new: true },
-  );
-  if (!updatedTrip) throw new AppError("Not enough available seats", 409);
+  // Update trip stats (simplification, real system would verify payment first)
+  availability.availableSeats -= travelers;
+  trip.bookingCount += 1;
+  trip.sales += 1;
+  trip.revenue += amount;
+  await trip.save();
 
-  try {
-    const booking = await Booking.create({
-      traveler: req.user._id,
-      seller: trip.seller,
-      trip: trip._id,
-      tripDateId,
-      selectedDepartureDate: selectedDate.departureDate,
-      selectedReturnDate: selectedDate.returnDate,
-      travelers,
-      totalPrice: (trip.discountPrice ?? trip.price) * travelers,
-      currency: trip.currency,
-      paymentStatus: "UNPAID",
-    });
-    sendSuccess(res, 201, "Booking created successfully; payment is not enabled yet", { booking });
-  } catch (error) {
-    await Trip.updateOne({ _id: trip._id, "availability._id": tripDateId }, { $inc: { "availability.$.availableSeats": travelers } });
-    throw error;
-  }
+  sendSuccess(res, 201, "Booking created successfully", { booking });
 });
 
-export const listTravelerBookings = catchAsync(async (req, res) => {
+export const listBookings = catchAsync(async (req, res) => {
   const { page, limit } = paginationOptions(req);
-  const filter = { traveler: req.user._id };
+  // User can see bookings they made OR bookings on their posts
+  const tripsOwned = await Trip.find({ ownerId: req.user._id }).select('_id');
+  const tripIds = tripsOwned.map(t => t._id);
+
+  const filter = {
+    $or: [
+      { userId: req.user._id },
+      { postId: { $in: tripIds } }
+    ]
+  };
+
   const [bookings, total] = await Promise.all([
-    Booking.find(filter).populate("trip", "title coverImage city country").populate("seller", "name sellerProfile.agencyName")
-      .sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    Booking.find(filter)
+      .populate("postId", "title coverImage")
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
     Booking.countDocuments(filter),
   ]);
+
   sendSuccess(res, 200, "Bookings fetched successfully", { bookings }, makePagination(page, limit, total));
 });
 
-export const getTravelerBooking = catchAsync(async (req, res) => {
-  const booking = await Booking.findOne({ _id: req.params.id, traveler: req.user._id })
-    .populate("trip").populate("seller", "name email sellerProfile");
+export const getBooking = catchAsync(async (req, res) => {
+  const booking = await Booking.findById(req.params.id)
+    .populate("postId", "title coverImage ownerId")
+    .populate("userId", "name email");
+
   if (!booking) throw new AppError("Booking not found", 404);
+
+  // Check ownership
+  const isTraveler = booking.userId._id.toString() === req.user._id.toString();
+  const isOwner = booking.postId.ownerId.toString() === req.user._id.toString();
+  if (!isTraveler && !isOwner) {
+    throw new AppError("Not authorized to view this booking", 403);
+  }
+
   sendSuccess(res, 200, "Booking fetched successfully", { booking });
-});
-
-export const cancelTravelerBooking = catchAsync(async (req, res) => {
-  const booking = await Booking.findOne({ _id: req.params.id, traveler: req.user._id });
-  if (!booking) throw new AppError("Booking not found", 404);
-  if (!["PENDING", "CONFIRMED"].includes(booking.status)) throw new AppError("This booking cannot be cancelled", 400);
-  booking.status = "CANCELLED";
-  booking.cancellationReason = req.body?.reason || "Cancelled by traveler";
-  await booking.save();
-  await restoreSeats(booking);
-  sendSuccess(res, 200, "Booking cancelled successfully", { booking });
-});
-
-export const listSellerBookings = catchAsync(async (req, res) => {
-  const { page, limit } = paginationOptions(req);
-  const filter = { seller: req.user._id };
-  if (req.query.status) filter.status = req.query.status;
-  const [bookings, total] = await Promise.all([
-    Booking.find(filter).populate("trip", "title coverImage city country").populate("traveler", "name email")
-      .sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-    Booking.countDocuments(filter),
-  ]);
-  sendSuccess(res, 200, "Seller bookings fetched successfully", { bookings }, makePagination(page, limit, total));
-});
-
-export const getSellerBooking = catchAsync(async (req, res) => {
-  const booking = await Booking.findOne({ _id: req.params.id, seller: req.user._id })
-    .populate("trip").populate("traveler", "name email");
-  if (!booking) throw new AppError("Booking not found", 404);
-  sendSuccess(res, 200, "Booking fetched successfully", { booking });
-});
-
-export const updateSellerBooking = catchAsync(async (req, res) => {
-  const { status } = req.body || {};
-  if (!["CONFIRMED", "REJECTED", "COMPLETED"].includes(status)) throw new AppError("Invalid seller booking status", 400);
-  const booking = await Booking.findOne({ _id: req.params.id, seller: req.user._id });
-  if (!booking) throw new AppError("Booking not found", 404);
-  if (booking.status === "CANCELLED") throw new AppError("Cancelled booking cannot be changed", 400);
-  if (status === "COMPLETED" && booking.status !== "CONFIRMED") throw new AppError("Only confirmed bookings can be completed", 400);
-  booking.status = status;
-  await booking.save();
-  if (status === "REJECTED") await restoreSeats(booking);
-  sendSuccess(res, 200, "Booking status updated successfully", { booking });
 });

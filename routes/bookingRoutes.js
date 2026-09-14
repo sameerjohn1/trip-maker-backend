@@ -1,21 +1,15 @@
 import express from "express";
 import {
-  cancelTravelerBooking, getSellerBooking, getTravelerBooking, listSellerBookings,
-  listTravelerBookings, updateSellerBooking,
+  createBooking, getBooking, listBookings
 } from "../controllers/bookingController.js";
-import { authorize, protect, requireSellerActive } from "../middleware/authMiddleware.js";
+import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-router.use(protect, authorize("TRAVELER"));
-router.get("/", listTravelerBookings);
-router.get("/:id", getTravelerBooking);
-router.patch("/:id/cancel", cancelTravelerBooking);
+router.use(protect);
+router.use(authorize("USER"));
 
-const sellerRouter = express.Router();
-sellerRouter.use(protect, authorize("SELLER"), requireSellerActive);
-sellerRouter.get("/", listSellerBookings);
-sellerRouter.get("/:id", getSellerBooking);
-sellerRouter.patch("/:id/status", updateSellerBooking);
+router.post("/", createBooking);
+router.get("/", listBookings);
+router.get("/:id", getBooking);
 
-export { sellerRouter };
 export default router;
