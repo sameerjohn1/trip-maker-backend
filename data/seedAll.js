@@ -7,7 +7,7 @@ import Trip from "../models/Trip.js";
 import Booking from "../models/Booking.js";
 import Inquiry from "../models/Inquiry.js";
 import Favorite from "../models/Favorite.js";
-import Chat from "../models/Chat.js";
+import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 
 const seed = async () => {
@@ -205,11 +205,11 @@ const seed = async () => {
   // 3. Clear existing test trips, bookings, inquiries, favorites, chats, messages
   console.log("Resetting trips, bookings, inquiries, favorites, chats, messages...");
   await Trip.deleteMany({ seller: sellerApproved._id });
-  await Booking.deleteMany({});
-  await Inquiry.deleteMany({});
-  await Favorite.deleteMany({});
-  await Chat.deleteMany({});
-  await Message.deleteMany({});
+  await Booking.collection.drop().catch(() => {});
+  await Inquiry.collection.drop().catch(() => {});
+  await Favorite.collection.drop().catch(() => {});
+  await Conversation.collection.drop().catch(() => {});
+  await Message.collection.drop().catch(() => {});
 
   // 4. Seed Trips
   console.log("Seeding Trips...");
@@ -220,7 +220,7 @@ const seed = async () => {
   const santoriniDest = destinationMap["Santorini"];
 
   const trip1 = await Trip.create({
-    seller: sellerApproved._id,
+    ownerId: sellerApproved._id,
     title: "Magical Paris & Louvre Art Immersion",
     shortDescription: "Experience the romance of Paris with VIP Louvre access, Seine cruise and Eiffel Tower dinner.",
     fullDescription: "Join our master tour guide on a 5-day journey through the City of Lights. From historic Montmartre and Notre Dame to private after-hours Louvre access and gourmet French dining, every detail is handled with care.",
@@ -285,7 +285,7 @@ const seed = async () => {
   });
 
   const trip2 = await Trip.create({
-    seller: sellerApproved._id,
+    ownerId: sellerApproved._id,
     title: "Dubai Desert Safari & Ultra Luxury Experience",
     shortDescription: "Discover modern marvels, Burj Khalifa heights, luxury yachts, and thrilling desert dune bashing.",
     fullDescription: "A 4-day premium package covering Dubai's most famous highlights: private desert safari with BBQ under the stars, Burj Khalifa 148th floor sky lounge, luxury yacht marina cruise, and Old Dubai souk tour.",
@@ -334,7 +334,7 @@ const seed = async () => {
   });
 
   const trip3 = await Trip.create({
-    seller: sellerApproved._id,
+    ownerId: sellerApproved._id,
     title: "Maldives All-Inclusive Overwater Villa Retreat",
     shortDescription: "Unwind in true tropical bliss with an overwater villa, private pool, snorkeling and sunset dolphins.",
     fullDescription: "Escape to paradise on a 6-day luxury island retreat. Includes roundtrip seaplane transfer, unlimited dining across 4 specialty restaurants, coral reef guided snorkeling, and daily spa credits.",
@@ -381,7 +381,7 @@ const seed = async () => {
   });
 
   const tripPending = await Trip.create({
-    seller: sellerApproved._id,
+    ownerId: sellerApproved._id,
     title: "Tokyo & Kyoto Cherry Blossom Cultural Journey",
     shortDescription: "A 7-day comprehensive journey exploring temples, bullet trains, and cherry blossom gardens.",
     fullDescription: "From the bustling streets of Shibuya and Akihabara to the quiet zen bamboo groves of Arashiyama and golden Kinkaku-ji temple in Kyoto.",
@@ -427,7 +427,7 @@ const seed = async () => {
   });
 
   const tripDraft = await Trip.create({
-    seller: sellerApproved._id,
+    ownerId: sellerApproved._id,
     title: "Santorini Sunset Wine & Sailing Expedition",
     shortDescription: "Draft trip for Santorini cliffside wine tasting and catamaran sailing.",
     fullDescription: "Detailed draft itinerary exploring Oia sunsets, volcanic hot springs, and Greek gastronomy.",
@@ -468,14 +468,13 @@ const seed = async () => {
   console.log("Seeding Bookings...");
   const dateParis = trip1.availability[0];
   const booking1 = await Booking.create({
-    traveler: traveler1._id,
-    seller: sellerApproved._id,
-    trip: trip1._id,
+    userId: traveler1._id,
+    postId: trip1._id,
     tripDateId: dateParis._id,
     selectedDepartureDate: dateParis.departureDate,
     selectedReturnDate: dateParis.returnDate,
     travelers: 2,
-    totalPrice: 1998, // 999 * 2
+    amount: 1998, // 999 * 2
     currency: "USD",
     status: "CONFIRMED",
     paymentStatus: "UNPAID",
@@ -483,14 +482,13 @@ const seed = async () => {
 
   const dateDubai = trip2.availability[0];
   const booking2 = await Booking.create({
-    traveler: traveler2._id,
-    seller: sellerApproved._id,
-    trip: trip2._id,
+    userId: traveler2._id,
+    postId: trip2._id,
     tripDateId: dateDubai._id,
     selectedDepartureDate: dateDubai.departureDate,
     selectedReturnDate: dateDubai.returnDate,
     travelers: 1,
-    totalPrice: 750,
+    amount: 750,
     currency: "USD",
     status: "PENDING",
     paymentStatus: "UNPAID",
@@ -527,36 +525,34 @@ const seed = async () => {
 
   // 7. Seed Favorites
   console.log("Seeding Favorites...");
-  await Favorite.create({ traveler: traveler1._id, trip: trip1._id });
-  await Favorite.create({ traveler: traveler1._id, trip: trip2._id });
-  await Favorite.create({ traveler: traveler2._id, trip: trip3._id });
+  await Favorite.create({ userId: traveler1._id, postId: trip1._id });
+  await Favorite.create({ userId: traveler1._id, postId: trip2._id });
+  await Favorite.create({ userId: traveler2._id, postId: trip3._id });
 
   console.log("Favorites seeded: 3 favorites.");
 
   // 8. Seed Chats & Messages (specifically between testing@gmail.com and pending@travels.com)
   console.log("Seeding Sample Chats & Messages...");
-  const seedChat = await Chat.create({
+  const seedChat = await Conversation.create({
     participants: [travelerTesting._id, sellerPending._id],
-    trip: trip1._id,
     lastMessageAt: new Date(),
   });
 
   const msg1 = await Message.create({
-    chat: seedChat._id,
+    conversationId: seedChat._id,
     sender: travelerTesting._id,
-    text: "Hello! I am interested in booking a tour with Horizon Escapes.",
+    content: "Hello! I am interested in booking a tour with Horizon Escapes.",
     isRead: true,
   });
 
   const msg2 = await Message.create({
-    chat: seedChat._id,
+    conversationId: seedChat._id,
     sender: sellerPending._id,
-    text: "Hi Testing Traveler! Thank you for reaching out. We offer great custom tour packages.",
+    content: "Hi Testing Traveler! Thank you for reaching out. We offer great custom tour packages.",
     isRead: false,
   });
 
   seedChat.lastMessage = msg2._id;
-  seedChat.lastMessageText = msg2.text;
   seedChat.lastMessageAt = msg2.createdAt;
   await seedChat.save();
 

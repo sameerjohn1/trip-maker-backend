@@ -31,6 +31,11 @@ export const initSocket = (server) => {
   io.on("connection", (socket) => {
     console.log(`[Socket] User connected: ${socket.id}, User ID: ${socket.userId}`);
 
+    // Join personal user room for targeted notifications (unread counts etc.)
+    if (socket.userId) {
+      socket.join(`user_${socket.userId}`);
+    }
+
     // Join room for specific chat conversation
     socket.on("join_chat", (chatId) => {
       if (chatId) {
