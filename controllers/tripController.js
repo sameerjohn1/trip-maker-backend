@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Trip from "../models/Trip.js";
 import Destination from "../models/Destination.js";
 import Favorite from "../models/Favorite.js";
@@ -163,6 +164,12 @@ export const createTrip = catchAsync(async (req, res) => {
   validatePrice(body);
   validateTripPayload(body);
 
+  if (body.destination) {
+    if (!mongoose.Types.ObjectId.isValid(body.destination)) {
+      throw new AppError("Invalid destination _id", 400);
+    }
+  }
+
   if (body.destination && (!body.country || !body.city)) {
     const destDoc = await Destination.findById(body.destination);
     if (destDoc) {
@@ -189,6 +196,12 @@ export const updateTrip = catchAsync(async (req, res) => {
   const body = await payloadFromRequest(req);
   validatePrice(body);
   validateTripPayload(body);
+
+  if (body.destination) {
+    if (!mongoose.Types.ObjectId.isValid(body.destination)) {
+      throw new AppError("Invalid destination _id", 400);
+    }
+  }
 
   if (body.destination && (!body.country || !body.city)) {
     const destDoc = await Destination.findById(body.destination);
