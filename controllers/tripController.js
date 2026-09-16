@@ -159,7 +159,7 @@ export const getUserPost = catchAsync(async (req, res) => {
 });
 
 export const createTrip = catchAsync(async (req, res) => {
-  const body = payloadFromRequest(req);
+  const body = await payloadFromRequest(req);
   validatePrice(body);
   validateTripPayload(body);
 
@@ -186,7 +186,7 @@ export const createTrip = catchAsync(async (req, res) => {
 export const updateTrip = catchAsync(async (req, res) => {
   const trip = await Trip.findOne({ _id: req.params.id, ownerId: req.user._id, isDeleted: false });
   if (!trip) throw new AppError("Post not found", 404);
-  const body = payloadFromRequest(req);
+  const body = await payloadFromRequest(req);
   validatePrice(body);
   validateTripPayload(body);
 
