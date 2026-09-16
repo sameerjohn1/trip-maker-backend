@@ -131,7 +131,7 @@ export const listPublicTrips = catchAsync(async (req, res) => {
       .sort(sort).skip((page - 1) * limit).limit(limit),
     Trip.countDocuments(filter),
   ]);
-  sendSuccess(res, 200, "Trips fetched successfully", { trips }, makePagination(page, limit, total));
+  sendSuccess(res, 200, "Trips fetched successfully", { items: trips }, makePagination(page, limit, total));
 });
 
 export const getPublicTrip = catchAsync(async (req, res) => {
@@ -149,7 +149,7 @@ export const listUserPosts = catchAsync(async (req, res) => {
     Trip.find(filter).populate("destination", "name country").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
     Trip.countDocuments(filter),
   ]);
-  sendSuccess(res, 200, "User posts fetched successfully", { trips }, makePagination(page, limit, total));
+  sendSuccess(res, 200, "User posts fetched successfully", { items: trips }, makePagination(page, limit, total));
 });
 
 export const getUserPost = catchAsync(async (req, res) => {

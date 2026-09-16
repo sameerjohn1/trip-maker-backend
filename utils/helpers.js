@@ -21,6 +21,7 @@ export const makePagination = (page, limit, total) => ({
   limit,
   total,
   totalPages: Math.ceil(total / limit),
+  hasNext: page < Math.ceil(total / limit),
 });
 
 export const publicUser = (user) => ({
