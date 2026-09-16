@@ -6,7 +6,9 @@ import { makePagination, paginationOptions } from "../utils/helpers.js";
 import { sendSuccess } from "../utils/response.js";
 
 export const createBooking = catchAsync(async (req, res) => {
-  const { postId, tripDateId, travelers } = req.body || {};
+  const tripId = req.params.tripId || req.body.postId;
+  const { tripDateId, travelers } = req.body || {};
+  const postId = tripId;
   if (!postId || !tripDateId || !travelers) {
     throw new AppError("postId, tripDateId, and travelers are required", 400);
   }
@@ -90,4 +92,44 @@ export const getBooking = catchAsync(async (req, res) => {
   }
 
   sendSuccess(res, 200, "Booking fetched successfully", { booking });
+});
+
+export const getOwnedBookings = catchAsync(async (req, res) => {
+  const { page, limit } = paginationOptions(req);
+  const tripsOwned = await Trip.find({ ownerId: req.user._id }).select('_id');
+  const tripIds = tripsOwned.map(t => t._id);
+
+  const filter = { postId: { $in: tripIds } };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate("postId", "title coverImage")
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Booking.countDocuments(filter),
+  ]);
+
+  sendSuccess(res, 200, "Owned bookings fetched successfully", { items: bookings }, makePagination(page, limit, total));
+});
+
+export const updateOwnedBooking = catchAsync(async (req, res) => {
+  const { status } = req.body;
+  if (!status || !["CONFIRMED", "REJECTED", "CANCELLED"].includes(status)) {
+    throw new AppError("Invalid status. Must be CONFIRMED, REJECTED, or CANCELLED", 400);
+  }
+
+  const booking = await Booking.findById(req.params.bookingId).populate("postId");
+  if (!booking) throw new AppError("Booking not found", 404);
+
+  if (booking.postId.ownerId.toString() !== req.user._id.toString()) {
+    throw new AppError("Not authorized to update this booking", 403);
+  }
+
+  // Update status
+  booking.status = status;
+  await booking.save();
+
+  sendSuccess(res, 200, "Booking updated successfully", { booking });
 });

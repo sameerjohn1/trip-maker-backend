@@ -6,6 +6,7 @@ import {
 } from "../controllers/tripController.js";
 import { listFavorites } from "../controllers/favoriteController.js";
 import { blockUser, unblockUser, getBlockedUsers } from "../controllers/blockController.js";
+import { getOwnedBookings, updateOwnedBooking } from "../controllers/bookingController.js";
 import { tripUpload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
@@ -33,5 +34,9 @@ router.get("/posts/:id", getUserPost);
 router.patch("/posts/:id", tripUpload, updateTrip);
 router.delete("/posts/:id", deleteTrip);
 router.post("/posts/:id/submit", submitTrip);
+
+// Owned Bookings
+router.get("/owned-bookings", getOwnedBookings);
+router.patch("/owned-bookings/:bookingId", updateOwnedBooking);
 
 export default router;
