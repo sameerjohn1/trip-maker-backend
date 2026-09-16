@@ -4,6 +4,8 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 import {
   createTrip, deleteTrip, getUserPost, listUserPosts, submitTrip, updateTrip
 } from "../controllers/tripController.js";
+import { listFavorites } from "../controllers/favoriteController.js";
+import { blockUser, unblockUser, getBlockedUsers } from "../controllers/blockController.js";
 import { tripUpload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
@@ -15,6 +17,14 @@ router.put("/me", updateProfile);
 router.delete("/me", deactivateAccount);
 
 router.get("/analytics", getUserAnalytics);
+
+// Favorites alias: frontend calls GET /api/v1/users/favorites
+router.get("/favorites", listFavorites);
+
+// Block / Unblock
+router.get("/blocked", getBlockedUsers);
+router.post("/:userId/block", blockUser);
+router.delete("/:userId/block", unblockUser);
 
 // Posts
 router.post("/posts", tripUpload, createTrip);

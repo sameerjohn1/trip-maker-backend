@@ -7,19 +7,52 @@ import catchAsync from "../utils/catchAsync.js";
 import { makePagination, paginationOptions, parseJsonField, removeFile } from "../utils/helpers.js";
 import { sendSuccess } from "../utils/response.js";
 import { runAutomatedModeration } from "../services/moderationService.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 const arrayFields = ["availability", "highlights", "includedServices", "excludedServices", "itinerary"];
-const payloadFromRequest = (req) => {
+
+// Upload a single file buffer to Cloudinary and return secure URL
+const uploadImageToCloudinary = async (buffer, filename) => {
+  const result = await uploadToCloudinary(buffer, "trip-marketplace/trips", filename);
+  return result.secure_url;
+};
+
+const payloadFromRequest = async (req) => {
   const body = { ...(req.body || {}) };
   for (const field of arrayFields) if (body[field] !== undefined) body[field] = parseJsonField(body[field], []);
   for (const field of ["duration", "numberOfNights", "price", "discountPrice", "depositAmount", "minimumGroupSize"]) {
     if (body[field] !== undefined && body[field] !== "") body[field] = Number(body[field]);
   }
   const files = req.files || {};
-  if (files.coverImage?.[0]) body.coverImage = `/uploads/${files.coverImage[0].filename}`;
-  if (files.galleryImages?.length) body.galleryImages = files.galleryImages.map((file) => `/uploads/${file.filename}`);
+
+  // Upload to Cloudinary if configured, otherwise skip (no local fallback for production)
+  const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+
+  if (files.coverImage?.[0]) {
+    const filename = `cover_${Date.now()}_${Math.round(Math.random() * 1e9)}`;
+    if (hasCloudinary) {
+      body.coverImage = await uploadImageToCloudinary(files.coverImage[0].buffer, filename);
+    } else {
+      body.coverImage = `/uploads/${files.coverImage[0].filename}`;
+    }
+  }
+
+  if (files.galleryImages?.length) {
+    const uploadedGallery = await Promise.all(
+      files.galleryImages.map(async (file, i) => {
+        const filename = `gallery_${Date.now()}_${i}_${Math.round(Math.random() * 1e9)}`;
+        if (hasCloudinary) {
+          return uploadImageToCloudinary(file.buffer, filename);
+        }
+        return `/uploads/${file.filename}`;
+      })
+    );
+    body.galleryImages = uploadedGallery;
+  }
+
   return body;
 };
+
 
 const validatePrice = (body) => {
   if (body.discountPrice !== undefined && body.discountPrice > body.price) {

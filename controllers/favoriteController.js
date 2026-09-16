@@ -5,6 +5,9 @@ import catchAsync from "../utils/catchAsync.js";
 import { makePagination, paginationOptions } from "../utils/helpers.js";
 import { sendSuccess } from "../utils/response.js";
 
+// Resolve postId from either :postId or :id route param
+const resolvePostId = (req) => req.params.postId || req.params.id;
+
 export const listFavorites = catchAsync(async (req, res) => {
   const { page, limit } = paginationOptions(req);
   const filter = { userId: req.user._id };
@@ -19,13 +22,15 @@ export const listFavorites = catchAsync(async (req, res) => {
     }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
     Favorite.countDocuments(filter),
   ]);
-  sendSuccess(res, 200, "Favorites fetched successfully", { favorites: favorites.filter((item) => item.postId) }, makePagination(page, limit, total));
+  const validFavorites = favorites.filter((item) => item.postId);
+  sendSuccess(res, 200, "Favorites fetched successfully", { favorites: validFavorites }, makePagination(page, limit, total));
 });
 
 export const addFavorite = catchAsync(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.postId, isDeleted: false, status: "PUBLISHED" });
+  const postId = resolvePostId(req);
+  const trip = await Trip.findOne({ _id: postId, isDeleted: false, status: "PUBLISHED" });
   if (!trip) throw new AppError("Public post not found", 404);
-  
+
   const existing = await Favorite.findOne({ userId: req.user._id, postId: trip._id });
   if (existing) throw new AppError("Post is already in favorites", 409);
 
@@ -37,19 +42,21 @@ export const addFavorite = catchAsync(async (req, res) => {
 });
 
 export const removeFavorite = catchAsync(async (req, res) => {
-  const deleted = await Favorite.findOneAndDelete({ userId: req.user._id, postId: req.params.postId });
+  const postId = resolvePostId(req);
+  const deleted = await Favorite.findOneAndDelete({ userId: req.user._id, postId });
   if (!deleted) throw new AppError("Favorite not found", 404);
 
-  const trip = await Trip.findById(req.params.postId);
+  const trip = await Trip.findById(postId);
   if (trip) {
     trip.favoriteCount = Math.max(0, trip.favoriteCount - 1);
     await trip.save();
   }
-  
+
   sendSuccess(res, 200, "Post removed from favorites", { favoriteCount: trip?.favoriteCount || 0 });
 });
 
 export const checkFavorite = catchAsync(async (req, res) => {
-  const favorite = await Favorite.findOne({ userId: req.user._id, postId: req.params.postId });
+  const postId = resolvePostId(req);
+  const favorite = await Favorite.findOne({ userId: req.user._id, postId });
   sendSuccess(res, 200, "Checked favorite", { favorited: !!favorite });
 });
