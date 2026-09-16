@@ -14,7 +14,7 @@ const bookingSchema = new mongoose.Schema(
     paymentStatus: { type: String, enum: ["UNPAID", "PENDING", "PAID", "FAILED", "REFUNDED"], default: "UNPAID" },
     cancellationReason: { type: String, trim: true, maxlength: 500 },
   },
-  { timestamps: true },
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
 bookingSchema.index({ userId: 1, createdAt: -1 });

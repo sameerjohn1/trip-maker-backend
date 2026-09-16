@@ -72,7 +72,7 @@ export const listBookings = catchAsync(async (req, res) => {
     Booking.countDocuments(filter),
   ]);
 
-  sendSuccess(res, 200, "Bookings fetched successfully", { bookings }, makePagination(page, limit, total));
+  sendSuccess(res, 200, "Bookings fetched successfully", { items: bookings }, makePagination(page, limit, total));
 });
 
 export const getBooking = catchAsync(async (req, res) => {

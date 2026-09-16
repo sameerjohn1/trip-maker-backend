@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpires: Date,
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
-  { timestamps: true },
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
 userSchema.index({ role: 1, status: 1 });
