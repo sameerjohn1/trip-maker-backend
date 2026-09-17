@@ -27,18 +27,12 @@ const tripSchema = new mongoose.Schema(
   {
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     title: { type: String, required: true, trim: true, minlength: 3, maxlength: 120 },
-    shortDescription: { type: String, trim: true, maxlength: 300 },
-    fullDescription: { type: String, trim: true, maxlength: 5000 },
+    description: { type: String, trim: true, maxlength: 5000 },
     destination: { type: mongoose.Schema.Types.ObjectId, ref: "Destination" },
     country: { type: String, trim: true, maxlength: 100 },
     city: { type: String, trim: true, maxlength: 100 },
-    category: { type: String, trim: true, maxlength: 60 },
-    tripType: { type: String, trim: true, maxlength: 60 },
     duration: { type: Number, min: 1, max: 365 },
     numberOfNights: { type: Number, min: 0, max: 364 },
-    price: { type: Number, min: 0 },
-    currency: { type: String, default: "USD", uppercase: true, minlength: 3, maxlength: 3 },
-    discountPrice: { type: Number, min: 0 },
     depositAmount: { type: Number, min: 0, default: 0 },
     minimumGroupSize: { type: Number, min: 1, default: 1 },
     availability: { type: [availabilitySchema], default: [] },
@@ -71,7 +65,7 @@ const tripSchema = new mongoose.Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
-tripSchema.index({ title: "text", shortDescription: "text", fullDescription: "text", city: "text", country: "text", category: "text" });
+tripSchema.index({ title: "text", description: "text", city: "text", country: "text" });
 tripSchema.index({ status: 1, expiresAt: 1 });
 tripSchema.index({ ownerId: 1, status: 1 });
 

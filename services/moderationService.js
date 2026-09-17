@@ -18,8 +18,7 @@ export const moderateContent = (text) => {
 export const runAutomatedModeration = (tripData) => {
   const fieldsToCheck = [
     tripData.title,
-    tripData.shortDescription,
-    tripData.fullDescription,
+    tripData.description,
     tripData.requirements,
     tripData.cancellationPolicy,
   ];
