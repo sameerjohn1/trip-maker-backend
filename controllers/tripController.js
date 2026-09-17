@@ -21,9 +21,24 @@ const uploadImageToCloudinary = async (buffer, filename) => {
 const payloadFromRequest = async (req) => {
   const body = { ...(req.body || {}) };
   for (const field of arrayFields) if (body[field] !== undefined) body[field] = parseJsonField(body[field], []);
-  for (const field of ["duration", "numberOfNights", "price", "discountPrice", "depositAmount", "minimumGroupSize"]) {
+  for (const field of ["duration", "numberOfNights", "depositAmount", "minimumGroupSize"]) {
     if (body[field] !== undefined && body[field] !== "") body[field] = Number(body[field]);
   }
+
+  // Handle flat frontend fields: departureDate, returnDate, seats → availability array
+  if (body.departureDate || body.returnDate || body.seats) {
+    const seats = Number(body.seats) || 1;
+    body.availability = [{
+      departureDate: body.departureDate,
+      returnDate: body.returnDate,
+      totalSeats: seats,
+      availableSeats: seats,
+    }];
+    delete body.departureDate;
+    delete body.returnDate;
+    delete body.seats;
+  }
+
   const files = req.files || {};
 
   // Upload to Cloudinary if configured, otherwise skip (no local fallback for production)
@@ -54,12 +69,6 @@ const payloadFromRequest = async (req) => {
   return body;
 };
 
-
-const validatePrice = (body) => {
-  if (body.discountPrice !== undefined && body.discountPrice > body.price) {
-    throw new AppError('Discount price cannot be greater than the original price', 400);
-  }
-};
 
 const validateTripPayload = (body) => {
   if (body.availability !== undefined) {
@@ -101,14 +110,11 @@ const publicFilter = (req) => {
   const q = req.query;
   if (q.search) {
     const regex = new RegExp(String(q.search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    filter.$or = [{ title: regex }, { country: regex }, { city: regex }, { category: regex }, { tripType: regex }];
+    filter.$or = [{ title: regex }, { country: regex }, { city: regex }];
   }
-  for (const key of ["country", "city", "category", "tripType"]) if (q[key]) filter[key] = q[key];
+  for (const key of ["country", "city"]) if (q[key]) filter[key] = q[key];
   if (q.destination) filter.destination = q.destination;
   if (q.ownerId) filter.ownerId = q.ownerId;
-  if (q.minPrice || q.maxPrice) filter.price = {};
-  if (q.minPrice) filter.price.$gte = Number(q.minPrice);
-  if (q.maxPrice) filter.price.$lte = Number(q.maxPrice);
   if (q.duration) filter.duration = Number(q.duration);
   return filter;
 };
@@ -116,8 +122,6 @@ const publicFilter = (req) => {
 const tripSort = {
   newest: { createdAt: -1 },
   oldest: { createdAt: 1 },
-  price_asc: { price: 1 },
-  price_desc: { price: -1 },
   most_famous: { favoriteCount: -1, createdAt: -1, _id: -1 },
   most_favorites: { favoriteCount: -1, createdAt: -1, _id: -1 },
   most_viewed: { viewCount: -1, createdAt: -1, _id: -1 },
@@ -161,7 +165,6 @@ export const getUserPost = catchAsync(async (req, res) => {
 
 export const createTrip = catchAsync(async (req, res) => {
   const body = await payloadFromRequest(req);
-  validatePrice(body);
   validateTripPayload(body);
 
   if (body.destination) {
@@ -194,7 +197,6 @@ export const updateTrip = catchAsync(async (req, res) => {
   const trip = await Trip.findOne({ _id: req.params.id, ownerId: req.user._id, isDeleted: false });
   if (!trip) throw new AppError("Post not found", 404);
   const body = await payloadFromRequest(req);
-  validatePrice(body);
   validateTripPayload(body);
 
   if (body.destination) {
@@ -217,7 +219,7 @@ export const updateTrip = catchAsync(async (req, res) => {
 
   delete body.status;
   delete body.ownerId;
-  const importantFields = ["price", "discountPrice", "destination", "availability", "itinerary", "country", "city", "title", "shortDescription", "fullDescription"];
+  const importantFields = ["destination", "availability", "itinerary", "country", "city", "title", "description"];
   const needsApproval = ["PUBLISHED"].includes(trip.status) &&
     importantFields.some((field) => body[field] !== undefined);
   if (needsApproval) {
@@ -249,7 +251,7 @@ export const submitTrip = catchAsync(async (req, res) => {
   const trip = await Trip.findOne({ _id: req.params.id, ownerId: req.user._id, isDeleted: false });
   if (!trip) throw new AppError("Post not found", 404);
   if (!["DRAFT", "REJECTED", "EXPIRED"].includes(trip.status)) throw new AppError("Only draft, rejected, or expired posts can be submitted", 400);
-  const required = ["title", "shortDescription", "fullDescription", "country", "city", "category", "tripType", "price"];
+  const required = ["title", "description", "country", "city"];
   const missing = required.filter((field) => !trip[field] && trip[field] !== 0);
   if (missing.length || !trip.coverImage || !trip.availability.length) {
     throw new AppError("Complete trip details, cover image and at least one availability date are required", 422, missing);
