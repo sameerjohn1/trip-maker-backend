@@ -15,6 +15,7 @@ import destinationRoutes from "./routes/destinationRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
+import { sellerRouter as sellerBookingRoutes } from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
@@ -30,13 +31,20 @@ const api = "/api/v1";
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 const clientUrls = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",").map((u) => u.trim()).filter(Boolean)
+  ? process.env.CLIENT_URL.split(",")
+      .map((u) => u.trim())
+      .filter(Boolean)
   : [];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || clientUrls.length === 0 || clientUrls.includes(origin) || clientUrls.includes("*")) {
+      if (
+        !origin ||
+        clientUrls.length === 0 ||
+        clientUrls.includes(origin) ||
+        clientUrls.includes("*")
+      ) {
         return callback(null, true);
       }
       return callback(null, true);
@@ -70,7 +78,11 @@ app.use(async (req, res, next) => {
     console.error("Database connection error:", err.message);
     res
       .status(503)
-      .json({ success: false, message: "Database temporarily unavailable", error: err.message });
+      .json({
+        success: false,
+        message: "Database temporarily unavailable",
+        error: err.message,
+      });
   }
 });
 
@@ -84,6 +96,7 @@ app.use(`${api}/users`, userRoutes);
 app.use(`${api}/destinations`, destinationRoutes);
 app.use(`${api}/trips`, tripRoutes);
 app.use(`${api}/bookings`, bookingRoutes);
+app.use(`${api}/seller/bookings`, sellerBookingRoutes);
 app.use(`${api}/admin`, adminRoutes);
 app.use(`${api}/chats`, chatRoutes);
 app.use(`${api}/upload`, uploadRoutes);

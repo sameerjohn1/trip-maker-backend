@@ -173,4 +173,10 @@ Create booking:
 
 Success responses contain `success`, `message`, and `data`. List endpoints also contain `pagination` with `page`, `limit`, `total`, and `totalPages`. Errors contain `success: false`, `message`, and optional field-level `errors`.
 
+Booking actions:
+
+- `PATCH /api/v1/bookings/:bookingId/cancel` (traveler): body may contain `{ "reason": "Change of plans" }`; response is `data.booking` with status `CANCELLED`.
+- `PATCH /api/v1/seller/bookings/:bookingId/status` (seller): body is `{ "status": "CONFIRMED" }` or `{ "status": "REJECTED" }`; response is `data.booking` with the updated status.
+- `POST /api/v1/chats/:chatId/messages`: body is `{ "content": "Hello" }` (the `text` alias is also accepted); response is `data.message`.
+
 Trip responses include `price` (number, per traveler) and `currency` (`PKR` or `USD`) inside each trip object. Favorites are available at `GET /api/v1/favorites`, `POST/DELETE /api/v1/favorites/:postId`, and `GET /api/v1/favorites/:postId/check`; authenticated users can also list them through `GET /api/v1/users/favorites`. Trip-specific aliases are `POST/DELETE /api/v1/trips/:id/favorites` and `GET /api/v1/trips/:id/favorites/check`.
