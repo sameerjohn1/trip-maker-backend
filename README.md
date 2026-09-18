@@ -47,80 +47,95 @@ Import `postman_collection.json`, set `baseUrl` if required, and run the request
 
 ### Authentication
 
-| Method | Endpoint | Auth |
-|---|---|---|
-| POST | `/api/v1/auth/register` | Public |
-| POST | `/api/v1/auth/login` | Public |
-| POST | `/api/v1/auth/refresh-token` | Public |
-| POST | `/api/v1/auth/verify-email` | Public |
-| POST | `/api/v1/auth/forgot-password` | Public |
-| POST | `/api/v1/auth/reset-password` | Public |
-| GET | `/api/v1/auth/me` | Bearer |
-| PUT | `/api/v1/auth/change-password` | Bearer |
-| POST | `/api/v1/auth/logout` | Bearer |
+| Method | Endpoint                       | Auth   |
+| ------ | ------------------------------ | ------ |
+| POST   | `/api/v1/auth/register`        | Public |
+| POST   | `/api/v1/auth/login`           | Public |
+| POST   | `/api/v1/auth/refresh-token`   | Public |
+| POST   | `/api/v1/auth/verify-email`    | Public |
+| POST   | `/api/v1/auth/forgot-password` | Public |
+| POST   | `/api/v1/auth/reset-password`  | Public |
+| GET    | `/api/v1/auth/me`              | Bearer |
+| PUT    | `/api/v1/auth/change-password` | Bearer |
+| POST   | `/api/v1/auth/logout`          | Bearer |
 
 ### Traveler
 
-| Method | Endpoint |
-|---|---|
-| GET/PUT/DELETE | `/api/v1/users/me` |
-| GET | `/api/v1/trips` |
-| GET | `/api/v1/trips/:id` |
+| Method          | Endpoint                                         |
+| --------------- | ------------------------------------------------ |
+| GET/PUT/DELETE  | `/api/v1/users/me`                               |
+| GET             | `/api/v1/trips`                                  |
+| GET             | `/api/v1/trips/:id`                              |
 | GET/POST/DELETE | `/api/v1/favorites`, `/api/v1/favorites/:tripId` |
-| POST | `/api/v1/trips/:tripId/inquiries` |
-| GET | `/api/v1/inquiries`, `/api/v1/inquiries/:id` |
-| POST | `/api/v1/trips/:tripId/bookings` |
-| GET | `/api/v1/bookings`, `/api/v1/bookings/:id` |
-| PATCH | `/api/v1/bookings/:id/cancel` |
+| POST            | `/api/v1/trips/:tripId/inquiries`                |
+| GET             | `/api/v1/inquiries`, `/api/v1/inquiries/:id`     |
+| POST            | `/api/v1/trips/:tripId/bookings`                 |
+| GET             | `/api/v1/bookings`, `/api/v1/bookings/:id`       |
+| PATCH           | `/api/v1/bookings/:id/cancel`                    |
 
 ### Seller
 
-| Method | Endpoint |
-|---|---|
-| GET/PUT | `/api/v1/seller/profile` |
-| POST | `/api/v1/seller/documents` |
-| GET | `/api/v1/seller/dashboard` |
-| GET/POST | `/api/v1/seller/trips` |
-| GET/PUT/DELETE | `/api/v1/seller/trips/:id` |
-| POST | `/api/v1/seller/trips/:id/submit` |
-| GET | `/api/v1/seller/inquiries`, `/api/v1/seller/inquiries/:id` |
-| PATCH | `/api/v1/seller/inquiries/:id/status` |
-| GET | `/api/v1/seller/bookings`, `/api/v1/seller/bookings/:id` |
-| PATCH | `/api/v1/seller/bookings/:id/status` |
+| Method         | Endpoint                                                   |
+| -------------- | ---------------------------------------------------------- |
+| GET/PUT        | `/api/v1/seller/profile`                                   |
+| POST           | `/api/v1/seller/documents`                                 |
+| GET            | `/api/v1/seller/dashboard`                                 |
+| GET/POST       | `/api/v1/seller/trips`                                     |
+| GET/PUT/DELETE | `/api/v1/seller/trips/:id`                                 |
+| POST           | `/api/v1/seller/trips/:id/submit`                          |
+| GET            | `/api/v1/seller/inquiries`, `/api/v1/seller/inquiries/:id` |
+| PATCH          | `/api/v1/seller/inquiries/:id/status`                      |
+| GET            | `/api/v1/seller/bookings`, `/api/v1/seller/bookings/:id`   |
+| PATCH          | `/api/v1/seller/bookings/:id/status`                       |
 
 ### Admin
 
-| Method | Endpoint |
-|---|---|
-| GET | `/api/v1/admin/dashboard` |
-| GET | `/api/v1/admin/users`, `/api/v1/admin/users/:id` |
-| PATCH | `/api/v1/admin/users/:id/status` |
-| DELETE | `/api/v1/admin/users/:id` (soft deactivation) |
-| GET | `/api/v1/admin/sellers`, `/api/v1/admin/sellers/:id` |
-| PATCH | `/api/v1/admin/sellers/:id/approve` or `/reject` |
-| GET | `/api/v1/admin/trips`, `/api/v1/admin/trips/:id` |
-| PATCH | `/api/v1/admin/trips/:id/approve`, `/reject`, `/unpublish` |
-| DELETE | `/api/v1/admin/trips/:id` (archive) |
-| GET | `/api/v1/admin/bookings`, `/api/v1/admin/bookings/:id` |
+| Method | Endpoint                                                                                                 |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/admin/dashboard`                                                                                |
+| GET    | `/api/v1/admin/users`, `/api/v1/admin/users/:id`                                                         |
+| PATCH  | `/api/v1/admin/users/:id/status`                                                                         |
+| DELETE | `/api/v1/admin/users/:id` (soft deactivation)                                                            |
+| GET    | `/api/v1/admin/sellers`, `/api/v1/admin/sellers/:id`                                                     |
+| PATCH  | `/api/v1/admin/sellers/:id/approve` or `/reject`                                                         |
+| GET    | `/api/v1/admin/posts`, `/api/v1/admin/posts/:id` (also `/api/v1/admin/trips`, `/api/v1/admin/trips/:id`) |
+| PATCH  | `/api/v1/admin/trips/:id/approve`, `/reject`, `/unpublish`                                               |
+| DELETE | `/api/v1/admin/trips/:id` (archive)                                                                      |
+| GET    | `/api/v1/admin/bookings`, `/api/v1/admin/bookings/:id`                                                   |
 
 ## JSON examples
 
 Register traveler:
 
 ```json
-{ "name": "Ali Khan", "email": "ali@example.com", "password": "Ali12345!", "role": "TRAVELER" }
+{
+  "name": "Ali Khan",
+  "email": "ali@example.com",
+  "password": "Ali12345!",
+  "role": "TRAVELER"
+}
 ```
 
 Register seller:
 
 ```json
-{ "name": "Travel Agency", "email": "seller@example.com", "password": "Seller12345!", "role": "SELLER" }
+{
+  "name": "Travel Agency",
+  "email": "seller@example.com",
+  "password": "Seller12345!",
+  "role": "SELLER"
+}
 ```
 
 Create/update seller profile:
 
 ```json
-{ "agencyName": "Explore Pakistan Tours", "description": "Licensed local tour operator", "phone": "+92 300 1234567", "address": "Lahore, Pakistan" }
+{
+  "agencyName": "Explore Pakistan Tours",
+  "description": "Licensed local tour operator",
+  "phone": "+92 300 1234567",
+  "address": "Lahore, Pakistan"
+}
 ```
 
 Create a trip with `multipart/form-data`:
@@ -157,3 +172,5 @@ Create booking:
 ## Response format
 
 Success responses contain `success`, `message`, and `data`. List endpoints also contain `pagination` with `page`, `limit`, `total`, and `totalPages`. Errors contain `success: false`, `message`, and optional field-level `errors`.
+
+Trip responses include `price` (number, per traveler) and `currency` (`PKR` or `USD`) inside each trip object. Favorites are available at `GET /api/v1/favorites`, `POST/DELETE /api/v1/favorites/:postId`, and `GET /api/v1/favorites/:postId/check`; authenticated users can also list them through `GET /api/v1/users/favorites`. Trip-specific aliases are `POST/DELETE /api/v1/trips/:id/favorites` and `GET /api/v1/trips/:id/favorites/check`.

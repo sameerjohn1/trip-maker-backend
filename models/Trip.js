@@ -33,6 +33,8 @@ const tripSchema = new mongoose.Schema(
     city: { type: String, trim: true, maxlength: 100 },
     duration: { type: Number, min: 1, max: 365 },
     numberOfNights: { type: Number, min: 0, max: 364 },
+    price: { type: Number, min: 0, default: 0 },
+    currency: { type: String, enum: ["PKR", "USD"], default: "PKR" },
     depositAmount: { type: Number, min: 0, default: 0 },
     minimumGroupSize: { type: Number, min: 1, default: 1 },
     availability: { type: [availabilitySchema], default: [] },

@@ -1,7 +1,16 @@
 import express from "express";
 import {
-  approveTrip, dashboard, deleteAdminTrip, deleteUser, getUser,
-  listAdminTrips, listUsers, rejectTrip, updateUserStatus, listAdminBookings, getAdminTrip
+  approveTrip,
+  dashboard,
+  deleteAdminTrip,
+  deleteUser,
+  getUser,
+  listAdminTrips,
+  listUsers,
+  rejectTrip,
+  updateUserStatus,
+  listAdminBookings,
+  getAdminTrip,
 } from "../controllers/adminController.js";
 // We removed getAdminChats for now, unless we want to keep it.
 // If chatController exists, we will update it later. Let's comment out for now.
@@ -20,6 +29,9 @@ router.delete("/users/:id", deleteUser);
 
 router.get("/posts", listAdminTrips);
 router.get("/posts/:id", getAdminTrip);
+// Keep the posts routes working while supporting the admin trips API contract.
+router.get("/trips", listAdminTrips);
+router.get("/trips/:id", getAdminTrip);
 router.patch("/posts/:id/approve", approveTrip);
 router.patch("/posts/:id/reject", rejectTrip);
 router.delete("/posts/:id", deleteAdminTrip);
