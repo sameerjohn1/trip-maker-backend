@@ -13,17 +13,28 @@ export const createBooking = catchAsync(async (req, res) => {
     throw new AppError("postId, tripDateId, and travelers are required", 400);
   }
 
-  const trip = await Trip.findOne({ _id: postId, isDeleted: false, status: "PUBLISHED" });
+  const trip = await Trip.findOne({
+    _id: postId,
+    isDeleted: false,
+    status: "PUBLISHED",
+  });
   if (!trip) throw new AppError("Public post not found", 404);
 
-  const availability = trip.availability.find(a => a._id.toString() === tripDateId);
-  if (!availability) throw new AppError("Selected availability date not found", 404);
+  const availability = trip.availability.find(
+    (a) => a._id.toString() === tripDateId,
+  );
+  if (!availability)
+    throw new AppError("Selected availability date not found", 404);
 
   if (availability.availableSeats < travelers) {
     throw new AppError("Not enough available seats", 409);
   }
 
-  const existingBooking = await Booking.findOne({ userId: req.user._id, postId: trip._id, tripDateId });
+  const existingBooking = await Booking.findOne({
+    userId: req.user._id,
+    postId: trip._id,
+    tripDateId,
+  });
   if (existingBooking && existingBooking.status !== "CANCELLED") {
     throw new AppError("You already have an active booking for this date", 409);
   }
@@ -54,14 +65,11 @@ export const createBooking = catchAsync(async (req, res) => {
 export const listBookings = catchAsync(async (req, res) => {
   const { page, limit } = paginationOptions(req);
   // User can see bookings they made OR bookings on their posts
-  const tripsOwned = await Trip.find({ ownerId: req.user._id }).select('_id');
-  const tripIds = tripsOwned.map(t => t._id);
+  const tripsOwned = await Trip.find({ ownerId: req.user._id }).select("_id");
+  const tripIds = tripsOwned.map((t) => t._id);
 
   const filter = {
-    $or: [
-      { userId: req.user._id },
-      { postId: { $in: tripIds } }
-    ]
+    $or: [{ userId: req.user._id }, { postId: { $in: tripIds } }],
   };
 
   const [bookings, total] = await Promise.all([
@@ -74,7 +82,13 @@ export const listBookings = catchAsync(async (req, res) => {
     Booking.countDocuments(filter),
   ]);
 
-  sendSuccess(res, 200, "Bookings fetched successfully", { items: bookings }, makePagination(page, limit, total));
+  sendSuccess(
+    res,
+    200,
+    "Bookings fetched successfully",
+    { items: bookings },
+    makePagination(page, limit, total),
+  );
 });
 
 export const getBooking = catchAsync(async (req, res) => {
@@ -94,10 +108,43 @@ export const getBooking = catchAsync(async (req, res) => {
   sendSuccess(res, 200, "Booking fetched successfully", { booking });
 });
 
+export const cancelBooking = catchAsync(async (req, res) => {
+  const booking = await Booking.findOne({
+    _id: req.params.bookingId,
+    userId: req.user._id,
+  }).populate("postId");
+  if (!booking) throw new AppError("Booking not found", 404);
+  if (!["PENDING", "CONFIRMED"].includes(booking.status)) {
+    throw new AppError(
+      "Only pending or confirmed bookings can be cancelled",
+      400,
+    );
+  }
+
+  booking.status = "CANCELLED";
+  if (req.body?.reason) booking.cancellationReason = req.body.reason;
+  await booking.save();
+
+  const trip = booking.postId;
+  const availability = trip?.availability?.id(booking.tripDateId);
+  if (availability) {
+    availability.availableSeats = Math.min(
+      availability.totalSeats,
+      availability.availableSeats + booking.travelers,
+    );
+    trip.bookingCount = Math.max(0, trip.bookingCount - 1);
+    trip.sales = Math.max(0, trip.sales - 1);
+    trip.revenue = Math.max(0, trip.revenue - booking.amount);
+    await trip.save();
+  }
+
+  sendSuccess(res, 200, "Booking cancelled successfully", { booking });
+});
+
 export const getOwnedBookings = catchAsync(async (req, res) => {
   const { page, limit } = paginationOptions(req);
-  const tripsOwned = await Trip.find({ ownerId: req.user._id }).select('_id');
-  const tripIds = tripsOwned.map(t => t._id);
+  const tripsOwned = await Trip.find({ ownerId: req.user._id }).select("_id");
+  const tripIds = tripsOwned.map((t) => t._id);
 
   const filter = { postId: { $in: tripIds } };
 
@@ -111,16 +158,27 @@ export const getOwnedBookings = catchAsync(async (req, res) => {
     Booking.countDocuments(filter),
   ]);
 
-  sendSuccess(res, 200, "Owned bookings fetched successfully", { items: bookings }, makePagination(page, limit, total));
+  sendSuccess(
+    res,
+    200,
+    "Owned bookings fetched successfully",
+    { items: bookings },
+    makePagination(page, limit, total),
+  );
 });
 
 export const updateOwnedBooking = catchAsync(async (req, res) => {
   const { status } = req.body;
   if (!status || !["CONFIRMED", "REJECTED", "CANCELLED"].includes(status)) {
-    throw new AppError("Invalid status. Must be CONFIRMED, REJECTED, or CANCELLED", 400);
+    throw new AppError(
+      "Invalid status. Must be CONFIRMED, REJECTED, or CANCELLED",
+      400,
+    );
   }
 
-  const booking = await Booking.findById(req.params.bookingId).populate("postId");
+  const booking = await Booking.findById(req.params.bookingId).populate(
+    "postId",
+  );
   if (!booking) throw new AppError("Booking not found", 404);
 
   if (booking.postId.ownerId.toString() !== req.user._id.toString()) {

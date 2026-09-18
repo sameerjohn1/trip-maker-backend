@@ -1,6 +1,10 @@
 import express from "express";
 import {
-  createBooking, getBooking, listBookings
+  cancelBooking,
+  createBooking,
+  getBooking,
+  listBookings,
+  updateOwnedBooking,
 } from "../controllers/bookingController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -11,5 +15,12 @@ router.use(authorize("USER"));
 router.post("/", createBooking);
 router.get("/", listBookings);
 router.get("/:id", getBooking);
+
+const sellerRouter = express.Router();
+sellerRouter.use(protect, authorize("SELLER"));
+sellerRouter.patch("/:bookingId/status", updateOwnedBooking);
+
+export { sellerRouter };
+router.patch("/:bookingId/cancel", cancelBooking);
 
 export default router;
