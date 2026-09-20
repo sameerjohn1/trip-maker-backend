@@ -37,6 +37,12 @@ Import `postman_collection.json`, set `baseUrl` if required, and run the request
 
 ## Important behavior
 
+- Post status values are `DRAFT`, `PENDING_APPROVAL`, `PUBLISHED`, `INACTIVE`, `SUSPENDED`, `REJECTED`, and `DELETED`. Only non-deleted `PUBLISHED` trips whose `expiresAt` is in the future are returned by public trip APIs. `DELETED` is terminal.
+- Seller lifecycle APIs: `PATCH /api/v1/seller/trips/:id/deactivate` (`PUBLISHED` → `INACTIVE`), `PATCH /api/v1/seller/trips/:id/activate` (`INACTIVE` → `PUBLISHED`), and `DELETE /api/v1/seller/trips/:id` (sets terminal `DELETED`). They require a seller Bearer token and no request body.
+- Admin moderation APIs: `PATCH /api/v1/admin/trips/:id/unpublish` or `/suspend` (`PUBLISHED` → `SUSPENDED`) and `PATCH /api/v1/admin/trips/:id/reactivate` (`SUSPENDED` → `PUBLISHED`). They require an admin Bearer token and no request body.
+- Trip chats may be created with `{ "recipientId", "tripId" }`; list/detail responses populate `trip` (`_id`, `title`, `ownerId`) and include `conversationType` (`BUYING` or `SELLING`). Use `PATCH /api/v1/chats/:chatId/read` to mark received messages read.
+- Every chat message creates a persistent recipient notification. Use `GET /api/v1/notifications` (or `?unread=true`), `PATCH /api/v1/notifications/:id/read`, or `PATCH /api/v1/notifications/read`.
+
 - All API routes use the `/api/v1` prefix.
 - A public traveler becomes `ACTIVE` immediately. A seller becomes `PENDING` and must be approved by an admin before creating trips.
 - In development, registration returns `verificationToken` and forgot-password returns `resetToken`. In production, connect a real email provider before enabling `REQUIRE_EMAIL_VERIFICATION=true`.

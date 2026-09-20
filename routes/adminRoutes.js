@@ -11,6 +11,8 @@ import {
   updateUserStatus,
   listAdminBookings,
   getAdminTrip,
+  suspendTrip,
+  reactivateTrip,
 } from "../controllers/adminController.js";
 // We removed getAdminChats for now, unless we want to keep it.
 // If chatController exists, we will update it later. Let's comment out for now.
@@ -34,7 +36,14 @@ router.get("/trips", listAdminTrips);
 router.get("/trips/:id", getAdminTrip);
 router.patch("/posts/:id/approve", approveTrip);
 router.patch("/posts/:id/reject", rejectTrip);
+router.patch("/posts/:id/suspend", suspendTrip);
+router.patch("/posts/:id/reactivate", reactivateTrip);
 router.delete("/posts/:id", deleteAdminTrip);
+router.patch("/trips/:id/approve", approveTrip);
+router.patch("/trips/:id/reject", rejectTrip);
+router.patch("/trips/:id/unpublish", suspendTrip);
+router.patch("/trips/:id/suspend", suspendTrip);
+router.patch("/trips/:id/reactivate", reactivateTrip);
 
 router.get("/bookings", listAdminBookings);
 
