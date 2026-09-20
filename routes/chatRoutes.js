@@ -5,6 +5,7 @@ import {
   getUserChats,
   sendMessage,
   deleteConversation,
+  markChatRead,
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -14,6 +15,7 @@ router.use(protect);
 
 router.route("/").get(getUserChats).post(getOrCreateChat);
 router.route("/:chatId/messages").get(getChatMessages).post(sendMessage);
+router.patch("/:chatId/read", markChatRead);
 router.route("/:chatId").delete(deleteConversation);
 
 export default router;

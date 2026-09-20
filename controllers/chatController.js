@@ -1,6 +1,8 @@
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import Trip from "../models/Trip.js";
+import Notification from "../models/Notification.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { makePagination, paginationOptions } from "../utils/helpers.js";
@@ -16,6 +18,20 @@ const getUnreadCount = async (conversationId, currentUserId) => {
   });
 };
 
+const populateConversation = (query) => query
+  .populate("participants", "_id name email role status")
+  .populate("trip", "_id title ownerId")
+  .populate("lastMessage", "_id content sender isRead createdAt");
+
+const withContext = (chat, userId) => {
+  const value = chat.toObject ? chat.toObject() : chat;
+  if (value.trip) {
+    const ownerId = value.trip.ownerId?._id || value.trip.ownerId;
+    value.conversationType = String(ownerId) === String(userId) ? "SELLING" : "BUYING";
+  }
+  return value;
+};
+
 // GET /api/v1/chats - List authenticated user's chats
 export const getUserChats = catchAsync(async (req, res) => {
   const { page, limit } = paginationOptions(req);
@@ -26,9 +42,7 @@ export const getUserChats = catchAsync(async (req, res) => {
   };
 
   const [chats, total] = await Promise.all([
-    Conversation.find(filter)
-      .populate("participants", "_id name email role status")
-      .populate("lastMessage", "_id content sender isRead createdAt")
+    populateConversation(Conversation.find(filter))
       .sort({ lastMessageAt: -1, updatedAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit),
@@ -39,7 +53,7 @@ export const getUserChats = catchAsync(async (req, res) => {
   const chatsWithUnread = await Promise.all(
     chats.map(async (chat) => {
       const unreadCount = await getUnreadCount(chat._id, req.user._id);
-      const chatObj = chat.toObject();
+      const chatObj = withContext(chat, req.user._id);
       chatObj.unreadCount = unreadCount;
       return chatObj;
     }),
@@ -50,7 +64,9 @@ export const getUserChats = catchAsync(async (req, res) => {
 
 // POST /api/v1/chats - Create or retrieve existing chat
 export const getOrCreateChat = catchAsync(async (req, res) => {
+  if (req.user.role === "ADMIN") throw new AppError("Admins cannot create traveler chats", 403);
   const recipientId = req.body.recipientId || req.body.userId;
+  const tripId = req.body.tripId;
 
   if (!recipientId) {
     throw new AppError("recipientId is required", 400);
@@ -64,6 +80,12 @@ export const getOrCreateChat = catchAsync(async (req, res) => {
   if (!recipient) {
     throw new AppError("Recipient user not found", 404);
   }
+  let trip = null;
+  if (tripId) {
+    trip = await Trip.findOne({ _id: tripId, status: "PUBLISHED", isDeleted: false }).select("_id ownerId title");
+    if (!trip) throw new AppError("Public trip not found", 404);
+    if (String(trip.ownerId) !== String(recipientId)) throw new AppError("recipientId must be the trip owner", 400);
+  }
 
   // Check if recipient has blocked the current user
   if (recipient.blockedUsers?.some((id) => id.toString() === req.user._id.toString())) {
@@ -71,20 +93,20 @@ export const getOrCreateChat = catchAsync(async (req, res) => {
   }
 
   // Find existing conversation (even if deleted — restore it for this user)
-  let conversation = await Conversation.findOne({
+  const conversationFilter = {
     participants: { $all: [req.user._id, recipientId] },
-  })
-    .populate("participants", "_id name email role status")
-    .populate("lastMessage", "_id content sender isRead createdAt");
+    ...(trip ? { trip: trip._id } : { trip: { $exists: false } }),
+  };
+  let conversation = await populateConversation(Conversation.findOne(conversationFilter));
 
   if (!conversation) {
     conversation = await Conversation.create({
       participants: [req.user._id, recipientId],
+      ...(trip ? { trip: trip._id } : {}),
       lastMessageAt: new Date(),
     });
 
-    conversation = await Conversation.findById(conversation._id)
-      .populate("participants", "_id name email role status");
+    conversation = await populateConversation(Conversation.findById(conversation._id));
   } else {
     // If user had previously deleted this conversation, restore it
     if (conversation.deletedBy?.some((id) => id.toString() === req.user._id.toString())) {
@@ -109,9 +131,16 @@ export const getOrCreateChat = catchAsync(async (req, res) => {
       $pull: { deletedBy: req.user._id },
     });
 
-    conversation = await Conversation.findById(conversation._id)
-      .populate("participants", "_id name email role status")
-      .populate("lastMessage", "_id content sender isRead createdAt");
+    conversation = await populateConversation(Conversation.findById(conversation._id));
+
+    const recipients = conversation.participants.filter((participant) => String(participant._id) !== String(req.user._id));
+    await Notification.insertMany(recipients.map((participant) => ({
+      recipientId: participant._id || participant,
+      senderId: req.user._id,
+      type: "MESSAGE",
+      chatId: conversation._id,
+      message: newMessage.content,
+    })));
 
     const io = getIO();
     if (io) {
@@ -145,7 +174,7 @@ export const getOrCreateChat = catchAsync(async (req, res) => {
   }
 
   const unreadCount = await getUnreadCount(conversation._id, req.user._id);
-  const chatObj = conversation.toObject ? conversation.toObject() : conversation;
+  const chatObj = withContext(conversation, req.user._id);
   chatObj.unreadCount = unreadCount;
 
   sendSuccess(res, 200, "Chat retrieved or created successfully", { chat: chatObj });
@@ -154,10 +183,7 @@ export const getOrCreateChat = catchAsync(async (req, res) => {
 // GET /api/v1/chats/:chatId/messages - Get messages in a chat
 export const getChatMessages = catchAsync(async (req, res) => {
   const { chatId } = req.params;
-  const conversation = await Conversation.findById(chatId).populate(
-    "participants",
-    "_id name email role status",
-  );
+  const conversation = await populateConversation(Conversation.findById(chatId));
 
   if (!conversation) {
     throw new AppError("Chat not found", 404);
@@ -196,11 +222,22 @@ export const getChatMessages = catchAsync(async (req, res) => {
     });
   }
 
-  sendSuccess(res, 200, "Messages fetched successfully", { chat: conversation, messages }, makePagination(page, limit, total));
+  sendSuccess(res, 200, "Messages fetched successfully", { chat: withContext(conversation, req.user._id), messages }, makePagination(page, limit, total));
+});
+
+export const markChatRead = catchAsync(async (req, res) => {
+  const conversation = await Conversation.findOne({ _id: req.params.chatId, participants: req.user._id });
+  if (!conversation) throw new AppError("Chat not found", 404);
+  const result = await Message.updateMany(
+    { conversationId: conversation._id, sender: { $ne: req.user._id }, isRead: false }, { isRead: true },
+  );
+  await Notification.updateMany({ chatId: conversation._id, recipientId: req.user._id, read: false }, { read: true });
+  sendSuccess(res, 200, "Chat marked as read", { modifiedCount: result.modifiedCount });
 });
 
 // POST /api/v1/chats/:chatId/messages - Send a message in a chat
 export const sendMessage = catchAsync(async (req, res) => {
+  if (req.user.role === "ADMIN") throw new AppError("Admins cannot send traveler chat messages", 403);
   const { chatId } = req.params;
   const text = req.body.content || req.body.text;
 
@@ -220,7 +257,7 @@ export const sendMessage = catchAsync(async (req, res) => {
     (p) => p._id.toString() === req.user._id.toString(),
   );
 
-  if (!isParticipant && req.user.role !== "ADMIN") {
+  if (!isParticipant) {
     throw new AppError("Access denied", 403);
   }
 
@@ -252,6 +289,15 @@ export const sendMessage = catchAsync(async (req, res) => {
     "_id name email role",
   );
 
+  const recipients = conversation.participants.filter((participant) => String(participant._id) !== String(req.user._id));
+  const notifications = await Notification.insertMany(recipients.map((participant) => ({
+    recipientId: participant._id,
+    senderId: req.user._id,
+    type: "MESSAGE",
+    chatId: conversation._id,
+    message: message.content,
+  })));
+
   const io = getIO();
   if (io) {
     // Broadcast to chat room
@@ -267,6 +313,8 @@ export const sendMessage = catchAsync(async (req, res) => {
           lastMessage: populatedMessage,
           unreadCount,
         });
+        const notification = notifications.find((item) => String(item.recipientId) === pid);
+        if (notification) io.to(`user_${pid}`).emit("notification:new", notification);
       }
     }
   }

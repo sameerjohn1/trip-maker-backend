@@ -47,11 +47,13 @@ export const uploadImage = catchAsync(async (req, res) => {
 });
 
 export const dashboard = catchAsync(async (req, res) => {
+  const sellerTrips = await Trip.find({ ownerId: req.user._id, isDeleted: false }).select("_id");
+  const tripIds = sellerTrips.map((trip) => trip._id);
   const [trips, inquiries, bookings, pendingBookings] = await Promise.all([
-    Trip.countDocuments({ seller: req.user._id, isDeleted: false }),
+    Trip.countDocuments({ ownerId: req.user._id, isDeleted: false }),
     Inquiry.countDocuments({ seller: req.user._id }),
-    Booking.countDocuments({ seller: req.user._id }),
-    Booking.countDocuments({ seller: req.user._id, status: "PENDING" }),
+    Booking.countDocuments({ postId: { $in: tripIds } }),
+    Booking.countDocuments({ postId: { $in: tripIds }, status: "PENDING" }),
   ]);
   sendSuccess(res, 200, "Seller dashboard fetched successfully", {
     seller: publicUser(req.user),

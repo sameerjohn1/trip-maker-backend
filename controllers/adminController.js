@@ -138,6 +138,24 @@ export const rejectTrip = catchAsync(async (req, res) => {
   sendSuccess(res, 200, "Post rejected successfully", { trip });
 });
 
+export const suspendTrip = catchAsync(async (req, res) => {
+  const trip = await Trip.findOneAndUpdate(
+    { _id: req.params.id, status: "PUBLISHED", isDeleted: false },
+    { status: "SUSPENDED" }, { new: true },
+  );
+  if (!trip) throw new AppError("Only published posts can be suspended", 400);
+  sendSuccess(res, 200, "Post suspended successfully", { trip });
+});
+
+export const reactivateTrip = catchAsync(async (req, res) => {
+  const trip = await Trip.findOneAndUpdate(
+    { _id: req.params.id, status: "SUSPENDED", isDeleted: false },
+    { status: "PUBLISHED" }, { new: true },
+  );
+  if (!trip) throw new AppError("Only suspended posts can be reactivated", 400);
+  sendSuccess(res, 200, "Post reactivated successfully", { trip });
+});
+
 export const deleteAdminTrip = catchAsync(async (req, res) => {
   const trip = await Trip.findOneAndUpdate(
     { _id: req.params.id, isDeleted: false },

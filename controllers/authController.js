@@ -39,7 +39,7 @@ export const register = catchAsync(async (req, res) => {
     name: String(name).trim(),
     email: normalizedEmail,
     password: await bcrypt.hash(password, 12),
-    role: "USER",
+      role: req.body?.role === "SELLER" ? "SELLER" : "USER",
     status: "ACTIVE",
     verificationTokenHash: hashToken(verificationToken),
     verificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),

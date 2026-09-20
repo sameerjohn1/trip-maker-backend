@@ -354,20 +354,31 @@ export const deleteTrip = catchAsync(async (req, res) => {
     postId: trip._id,
     status: { $in: ["CONFIRMED", "COMPLETED"] },
   });
-  if (confirmed) {
-    trip.isDeleted = true;
-    await trip.save();
-    return sendSuccess(
-      res,
-      200,
-      "Post archived because it has confirmed bookings",
-    );
-  }
+  // DELETED is terminal even when retained in MongoDB for audit/history.
+  trip.status = "DELETED";
   trip.isDeleted = true;
   await trip.save();
   [...(trip.galleryImages || []), trip.coverImage].forEach(removeFile);
   await Favorite.deleteMany({ postId: trip._id });
   sendSuccess(res, 200, "Post deleted successfully");
+});
+
+export const deactivateTrip = catchAsync(async (req, res) => {
+  const trip = await Trip.findOneAndUpdate(
+    { _id: req.params.id, ownerId: req.user._id, status: "PUBLISHED", isDeleted: false },
+    { status: "INACTIVE" }, { new: true },
+  );
+  if (!trip) throw new AppError("Only published posts can be deactivated", 400);
+  sendSuccess(res, 200, "Post deactivated successfully", { trip });
+});
+
+export const activateTrip = catchAsync(async (req, res) => {
+  const trip = await Trip.findOneAndUpdate(
+    { _id: req.params.id, ownerId: req.user._id, status: "INACTIVE", isDeleted: false },
+    { status: "PUBLISHED" }, { new: true },
+  );
+  if (!trip) throw new AppError("Only inactive posts can be activated", 400);
+  sendSuccess(res, 200, "Post activated successfully", { trip });
 });
 
 export const submitTrip = catchAsync(async (req, res) => {

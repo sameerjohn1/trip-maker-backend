@@ -48,7 +48,7 @@ const tripSchema = new mongoose.Schema(
     galleryImages: [{ type: String, trim: true }],
     status: {
       type: String,
-      enum: ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "REJECTED", "EXPIRED"],
+      enum: ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "INACTIVE", "SUSPENDED", "REJECTED", "DELETED"],
       default: "DRAFT",
       index: true,
     },

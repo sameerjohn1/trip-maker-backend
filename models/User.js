@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
     password: { type: String, required: true, minlength: 6, select: false },
-    role: { type: String, enum: ["USER", "ADMIN"], default: "USER" },
+    role: { type: String, enum: ["USER", "SELLER", "ADMIN"], default: "USER" },
     status: {
       type: String,
       enum: ["ACTIVE", "SUSPENDED", "BANNED"],
@@ -25,6 +25,14 @@ const userSchema = new mongoose.Schema(
     resetPasswordTokenHash: String,
     resetPasswordExpires: Date,
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    sellerProfile: {
+      agencyName: { type: String, trim: true, maxlength: 150 },
+      description: { type: String, trim: true, maxlength: 2000 },
+      phone: { type: String, trim: true, maxlength: 50 },
+      address: { type: String, trim: true, maxlength: 300 },
+      verificationStatus: { type: String, enum: ["NOT_SUBMITTED", "PENDING", "APPROVED", "REJECTED"], default: "NOT_SUBMITTED" },
+      documents: [{ url: String, originalName: String }],
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

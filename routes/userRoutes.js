@@ -11,7 +11,7 @@ import { tripUpload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 router.use(protect);
-router.use(authorize("USER", "ADMIN"));
+router.use(authorize("USER"));
 
 router.get("/me", getProfile);
 router.put("/me", updateProfile);
