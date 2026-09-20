@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node data/seedDestinations.js",
-    "admin": "node data/createAdmin.js"
+    "admin": "node data/createAdmin.js",
+    "repair:chat-indexes": "node data/repairChatIndexes.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

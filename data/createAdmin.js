@@ -1,14 +1,17 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import connectDB from "../configs/db.js";
 import User from "../models/User.js";
 
 // "email": "admin@example.com",
 // "password": "Admin123!"
 
-const email = process.env.ADMIN_EMAIL || "muhammedaliashfaq@gmail.com";
-const password = process.env.ADMIN_PASSWORD || "123456";
-const name = process.env.ADMIN_NAME || "Muhammad Ali Ashfaq";
+// Keep these development defaults aligned with the README. In deployed
+// environments, always provide ADMIN_EMAIL and ADMIN_PASSWORD explicitly.
+const email = process.env.ADMIN_EMAIL || "admin@example.com";
+const password = process.env.ADMIN_PASSWORD || "Admin123!";
+const name = process.env.ADMIN_NAME || "Admin";
 
 try {
   await connectDB();
@@ -30,5 +33,5 @@ try {
   console.error("Admin creation failed:", error.message);
   process.exitCode = 1;
 } finally {
-  process.exit();
+  await mongoose.disconnect();
 }

@@ -20,8 +20,12 @@ Production-ready MVP backend for the supplied trip marketplace specification. It
 4. Create the first admin (admin accounts cannot be publicly registered):
 
    ```bash
-   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=Admin123! npm run admin
+   npm run admin
    ```
+
+   The development defaults are `admin@example.com` / `Admin123!`. Set
+   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_NAME` in `.env` before running
+   the command to use different credentials.
 
 5. Start:
 
