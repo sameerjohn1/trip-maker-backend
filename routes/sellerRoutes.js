@@ -18,18 +18,18 @@ import { sellerRouter as bookingSellerRouter } from "./bookingRoutes.js";
 const router = express.Router();
 router.use(protect);
 
-router.get("/profile", authorize("SELLER"), getSellerProfile);
-router.put("/profile", authorize("SELLER"), updateSellerProfile);
+router.get("/profile", authorize("USER", "ADMIN"), getSellerProfile);
+router.put("/profile", authorize("USER", "ADMIN"), updateSellerProfile);
 router.post(
   "/documents",
-  authorize("SELLER"),
+  authorize("USER", "ADMIN"),
   sellerDocumentUpload,
   uploadDocuments,
 );
-router.post("/upload", authorize("SELLER"), singleImageUpload, uploadImage);
-router.get("/dashboard", authorize("SELLER"), dashboard);
+router.post("/upload", authorize("USER", "ADMIN"), singleImageUpload, uploadImage);
+router.get("/dashboard", authorize("USER", "ADMIN"), dashboard);
 
 router.use("/trips", authorize("USER", "ADMIN"), tripSellerRouter);
-router.use("/inquiries", authorize("SELLER"), inquirySellerRouter);
+router.use("/inquiries", authorize("USER", "ADMIN"), inquirySellerRouter);
 router.use("/bookings", authorize("USER", "ADMIN"), bookingSellerRouter);
 export default router;
