@@ -44,11 +44,11 @@ export const authorize = (...roles) => (req, res, next) => {
   next();
 };
 
-// Seller-only routes use this explicit guard so a route cannot accidentally
-// treat a traveler or administrator as a seller.
+// Legacy seller endpoints now operate for regular users who own the resource.
+// Ownership checks in their controllers remain the authorization boundary.
 export const requireSellerActive = (req, res, next) => {
-  if (!req.user || req.user.role !== "SELLER" || req.user.status !== "ACTIVE") {
-    return next(new AppError("An active seller account is required", 403));
+  if (!req.user || !["USER", "ADMIN"].includes(req.user.role) || req.user.status !== "ACTIVE") {
+    return next(new AppError("An active user account is required", 403));
   }
   next();
 };

@@ -30,6 +30,11 @@ export const publicUser = (user) => ({
   email: user.email,
   role: user.role,
   status: user.status,
+  phone: user.phone,
+  // Retained as a response alias while the API stores one canonical phone field.
+  phoneNumber: user.phone,
+  profilePhoto: user.profilePhoto,
+  showPhoneInPost: user.showPhoneInPost,
 });
 
 export const removeFile = (fileUrl) => {

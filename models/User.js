@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
     password: { type: String, required: true, minlength: 6, select: false },
-    role: { type: String, enum: ["USER", "SELLER", "ADMIN"], default: "USER" },
+    // The application has two account types only. Trip ownership is determined
+    // by ownerId, not by a separate seller role.
+    role: { type: String, enum: ["USER", "ADMIN"], default: "USER" },
     status: {
       type: String,
       enum: ["ACTIVE", "SUSPENDED", "BANNED"],
@@ -25,6 +27,9 @@ const userSchema = new mongoose.Schema(
     resetPasswordTokenHash: String,
     resetPasswordExpires: Date,
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    phone: { type: String, trim: true, maxlength: 50 },
+    profilePhoto: { type: String, trim: true, maxlength: 2000 },
+    showPhoneInPost: { type: Boolean, default: false },
     sellerProfile: {
       agencyName: { type: String, trim: true, maxlength: 150 },
       description: { type: String, trim: true, maxlength: 2000 },
