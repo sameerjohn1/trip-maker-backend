@@ -23,9 +23,9 @@ Production-ready MVP backend for the supplied trip marketplace specification. It
    npm run admin
    ```
 
-   The development defaults are `admin@example.com` / `Admin123!`. Set
-   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_NAME` in `.env` before running
-   the command to use different credentials.
+   Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_NAME` in `.env` before
+   running the command. `ADMIN_PASSWORD` must be at least 12 characters and
+   include uppercase, lowercase, a number, and a symbol.
 
 5. Start:
 
