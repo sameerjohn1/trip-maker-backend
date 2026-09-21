@@ -17,7 +17,7 @@ router.get("/", listBookings);
 router.get("/:id", getBooking);
 
 const sellerRouter = express.Router();
-sellerRouter.use(protect, authorize("SELLER"));
+sellerRouter.use(protect, authorize("USER", "ADMIN"));
 sellerRouter.patch("/:bookingId/status", updateOwnedBooking);
 
 export { sellerRouter };
