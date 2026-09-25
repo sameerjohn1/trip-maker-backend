@@ -6,6 +6,32 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
+// Trip IDs are MongoDB-generated `_id` values. A legacy unique index on the
+// removed `tripId` field makes every document without that field conflict after
+// the first insert. Destinations are shared lookup records, so they must not be
+// unique on a trip either.
+export const removeLegacyTripUniqueIndexes = async (db) => {
+  const collection = db.collection("trips");
+  let indexes;
+  try {
+    indexes = await collection.indexes();
+  } catch (error) {
+    // A fresh database has no trips collection/indexes to migrate yet.
+    if (error.code === 26) return;
+    throw error;
+  }
+  const legacyIndexes = indexes.filter(
+    (index) =>
+      index.unique &&
+      ((Object.keys(index.key).length === 1 && index.key.tripId === 1) ||
+        (Object.keys(index.key).length === 1 && index.key.destination === 1)),
+  );
+
+  await Promise.all(
+    legacyIndexes.map((index) => collection.dropIndex(index.name)),
+  );
+};
+
 const connectDB = async () => {
   if (mongoose.connection.readyState === 1) {
     cached.conn = mongoose.connection;
@@ -30,7 +56,8 @@ const connectDB = async () => {
 
   cached.promise = mongoose
     .connect(process.env.MONGO_URI, opts)
-    .then((mongooseInstance) => {
+    .then(async (mongooseInstance) => {
+      await removeLegacyTripUniqueIndexes(mongooseInstance.connection.db);
       console.log(`MongoDB connected: ${mongooseInstance.connection.host}`);
       return mongooseInstance.connection;
     })
